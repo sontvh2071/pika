@@ -1,0 +1,56 @@
+# Pika — Tokyo Night. Reload with Ctrl+Shift+, or pika reload-config.
+schema_version = 1
+pinned_ids = []
+
+[window]
+width = 720
+height = 520
+remember_query = false
+
+[appearance]
+theme = "custom"
+inner_inset = 8
+radius = 20
+font_size = 16
+
+# For theme = "custom", override any of these semantic colors.
+[appearance.colors]
+background = "#101010"
+surface = "#151515"
+text = "#f3f3f3"
+muted = "#b8b8b8"
+selection = "#343434"
+accent = "#ffffff"
+border = "#535353"
+error = "#d0d0d0"
+
+[search]
+include_commands = false
+max_results = 10
+
+[index]
+exclude_paths = ["/home/lilmint/workspace/go", "/home/lilmint/go"]
+# Empty by default. Add only directories you want searchable.
+roots = ["/home/lilmint"]
+exclude_dirs = [".git", "node_modules", ".cache", "vendor", "dist", "build", ".venv"]
+max_depth = 32
+max_candidates = 100000
+include_hidden = false
+
+[watcher]
+enabled = true
+max_directories = 16384
+reconcile_seconds = 900
+
+# Uncomment and adjust to create your own project shortcut.
+# [[commands]]
+# id = "open-pika"
+# name = "Open Pika project"
+# aliases = ["pika", "project pika"]
+# executable = "code"
+# args = ["/home/lilmint/workspace/me/pika"]
+# cwd = "/home/lilmint/workspace/me/pika"
+
+[open]
+workspace_executable = "/usr/bin/code"
+workspace_root = "/home/lilmint/workspace"

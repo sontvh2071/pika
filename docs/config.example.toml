@@ -1,0 +1,56 @@
+# Pika — Tokyo Night. Reload with Ctrl+Shift+, or pika reload-config.
+schema_version = 1
+pinned_ids = []
+
+[window]
+width = 800
+height = 660
+remember_query = false
+
+[appearance]
+theme = "tokyo-night" # tokyo-night, catppuccin, rose-pine, gruvbox, dracula, kanagawa, light, custom
+inner_inset = 12      # spacing between search and result panels, in px
+radius = 20
+font_size = 15
+
+# For theme = "custom", override any of these semantic colors.
+[appearance.colors]
+background = "#1a1b26"
+surface = "#24283b"
+text = "#c0caf5"
+muted = "#9aa5ce"
+selection = "#283457"
+accent = "#7aa2f7"
+border = "#414868"
+error = "#f7768e"
+
+[search]
+max_results = 10
+include_commands = true
+
+[open]
+workspace_root = "~/workspace"
+workspace_executable = "code"
+
+[index]
+# Empty by default. Add only directories you want searchable.
+roots = [] # e.g. ["~/Documents", "~/Downloads", "~/workspace/me"]
+exclude_paths = [] # absolute paths or ~/paths; excludes that subtree only
+exclude_dirs = [".git", "node_modules", ".cache", "vendor", "dist", "build", ".venv"]
+max_depth = 8
+max_candidates = 50000
+include_hidden = false
+
+[watcher]
+enabled = true
+max_directories = 4096
+reconcile_seconds = 900
+
+# Uncomment and adjust to create your own project shortcut.
+# [[commands]]
+# id = "open-pika"
+# name = "Open Pika project"
+# aliases = ["pika", "project pika"]
+# executable = "code"
+# args = ["/home/lilmint/workspace/me/pika"]
+# cwd = "/home/lilmint/workspace/me/pika"
