@@ -29,10 +29,11 @@ func FileCommand(cfg config.Open, path string) *exec.Cmd {
 }
 
 type Details struct {
-	Kind    string `json:"kind"`
-	Path    string `json:"path"`
-	Version string `json:"version"`
-	Opener  string `json:"opener"`
+	UsageProvider string `json:"usage_provider,omitempty"`
+	Kind          string `json:"kind"`
+	Path          string `json:"path"`
+	Version       string `json:"version"`
+	Opener        string `json:"opener"`
 }
 type cachedDetails struct {
 	Generation uint64
@@ -46,6 +47,9 @@ func (s *Service) Details(id string) (Details, error) {
 		return Details{}, fmt.Errorf("Result is no longer indexed")
 	}
 	d := Details{Kind: c.Kind, Path: c.Path}
+	if supportsCodexUsage(c) {
+		d.UsageProvider = "codex"
+	}
 	switch c.Kind {
 	case "file", "directory":
 		d.Path = c.Target

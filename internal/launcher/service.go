@@ -15,6 +15,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"pika/internal/catalog"
+	"pika/internal/codexusage"
 	"pika/internal/config"
 	"pika/internal/desktop"
 	"pika/internal/storage"
@@ -63,11 +64,12 @@ type Service struct {
 	icons         sync.Map
 	details       sync.Map
 	metadataSlots chan struct{}
+	codexQuota    *codexusage.Client
 }
 
 func New(cfg config.Config, path, dataPath string) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &Service{cfg: cfg, configPath: path, refresh: make(chan struct{}, 1), ctx: ctx, cancel: cancel, metadataSlots: make(chan struct{}, 2)}
+	s := &Service{cfg: cfg, configPath: path, refresh: make(chan struct{}, 1), ctx: ctx, cancel: cancel, metadataSlots: make(chan struct{}, 2), codexQuota: codexusage.New()}
 	s.snapshot.Store(&Snapshot{Items: []catalog.Candidate{}, ByID: map[string]catalog.Candidate{}})
 	usage := map[string]catalog.Usage{}
 	store, err := storage.Open(dataPath)

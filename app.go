@@ -5,6 +5,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"os"
 	"os/signal"
+	"pika/internal/codexusage"
 	"pika/internal/config"
 	"pika/internal/ipc"
 	"pika/internal/launcher"
@@ -134,6 +135,9 @@ func (a *App) focusState() map[string]bool {
 	visible := a.visible
 	a.mu.Unlock()
 	return map[string]bool{"visible": visible, "mapped": mapped, "window_active": active, "webview_focused": webview, "document_focused": flags&1 != 0, "query_focused": flags&2 != 0}
+}
+func (a *App) CodexUsage(id string, refresh bool) (codexusage.Snapshot, error) {
+	return a.service.CodexUsage(id, refresh)
 }
 func (a *App) OpenConfig() error          { return a.service.OpenConfig() }
 func (a *App) SetTheme(name string) error { return a.service.SetTheme(name) }

@@ -49,12 +49,15 @@ type Response = {
     version: number;
     duration_ms: number;
 };
+type QuotaWindow = {remaining_percent:number; resets_at:number|null};
+type CodexQuota = {five_hour:QuotaWindow|null; weekly:QuotaWindow|null; reset_credits:number|null; updated_at:number; stale:boolean; message:string};
 type API = {
     GetState(): Promise<AppState>;
     Search(q: string, kind: string, id: number): Promise<Response>;
     Execute(id: string): Promise<void>;
     Icon(id: string): Promise<string>;
-    Details(id: string): Promise<{kind: string; path: string; version: string; opener: string}>;
+    Details(id: string): Promise<{kind: string; path: string; version: string; opener: string; usage_provider?:string}>;
+    CodexUsage(id:string, refresh:boolean): Promise<CodexQuota>;
     Hide(): Promise<void>;
     FrontendReady(): Promise<void>;
     ReportFocus(documentFocused: boolean, queryFocused: boolean): Promise<void>;
@@ -99,6 +102,7 @@ function svg(name: string, cls = ''): string { return `<svg class="${cls}" viewB
 const native = Boolean(window.go?.main?.App);
 document.documentElement.dataset.host = native ? 'native' : 'preview';
 const demo: Item[] = [
+    {path:'/usr/share/applications/chatgpt.desktop',id:'app:chatgpt.desktop',kind:'app',name:'ChatGPT',subtitle:'AI assistant',pinned:false},
     {path:'/usr/bin/cinnamon-screensaver-command',id:'system:lock',kind:'system',name:'Lock',subtitle:'Lock the screen',pinned:false},
     {path:'/usr/bin/cinnamon-session-quit',id:'system:logout',kind:'system',name:'Log Out',subtitle:'Choose Log Out, Switch User or Cancel',pinned:false},
     {path:'/usr/bin/cinnamon-session-quit',id:'system:shutdown',kind:'system',name:'Shut Down',subtitle:'Choose Suspend, Restart, Shut Down or Cancel',pinned:false},
@@ -109,12 +113,13 @@ const demo: Item[] = [
     { path: '/home/lilmint/workspace/me/pika', id: 'preview:project', kind: 'directory', name: 'pika', subtitle: '~/workspace/me', pinned: false },
     { path: '/home/lilmint/Documents', id: 'preview:documents', kind: 'directory', name: 'Documents', subtitle: '~/Documents', pinned: false },
 ];
-const previewState: AppState = { config: { window: { width: 720, height: 520, remember_query: false }, appearance: { theme: 'custom', inner_inset: 8, radius: 20, font_size: 16, colors: {background:'#101010',surface:'#151515',text:'#f3f3f3',muted:'#b8b8b8',selection:'#343434',accent:'#ffffff',border:'#535353',error:'#d0d0d0'} }, search: {include_commands:false}, open: {workspace_root:'/home/lilmint/workspace',workspace_executable:'/usr/bin/code'}, index: { roots: ['/home/lilmint'] } }, status: { apps: 4, files: 2, commands: 0, system: 3, indexing: false, watches: 0, warnings: [], state_error: '', duration_ms: 0 }, config_path: '~/.config/pika/config.toml' };
+const previewState: AppState = { config: { window: { width: 720, height: 520, remember_query: false }, appearance: { theme: 'custom', inner_inset: 8, radius: 20, font_size: 16, colors: {background:'#101010',surface:'#151515',text:'#f3f3f3',muted:'#b8b8b8',selection:'#343434',accent:'#ffffff',border:'#535353',error:'#d0d0d0'} }, search: {include_commands:false}, open: {workspace_root:'/home/lilmint/workspace',workspace_executable:'/usr/bin/code'}, index: { roots: ['/home/lilmint'] } }, status: { apps: 5, files: 2, commands: 0, system: 3, indexing: false, watches: 0, warnings: [], state_error: '', duration_ms: 0 }, config_path: '~/.config/pika/config.toml' };
 const api: API = window.go?.main.App || {
     GetState: async () => previewState,
     ReportFocus: async () => {},
     CenterWindow: async () => {},
-    Details: async id => { const x = demo.find(item => item.id === id)!; return {kind:x.kind,path:x.path,version:'',opener:x.kind === 'system' ? (x.id === 'system:lock' ? 'Lock screen' : 'Show options') : x.path.startsWith('/home/lilmint/workspace/') ? 'VS Code' : x.kind === 'directory' ? 'File manager' : 'Launch application'}; },
+    CodexUsage: async () => ({five_hour:{remaining_percent:64,resets_at:1893456000},weekly:{remaining_percent:81,resets_at:1894060800},reset_credits:3,updated_at:0,stale:false,message:'Preview example · desktop reads live usage'}),
+    Details: async id => { const x = demo.find(item => item.id === id)!; return {usage_provider:x.id === 'app:chatgpt.desktop' ? 'codex' : undefined,kind:x.kind,path:x.path,version:'',opener:x.kind === 'system' ? (x.id === 'system:lock' ? 'Lock screen' : 'Show options') : x.path.startsWith('/home/lilmint/workspace/') ? 'VS Code' : x.kind === 'directory' ? 'File manager' : 'Launch application'}; },
     SetTheme: async name => { previewState.config.appearance.theme = name; },
     Search: async (q, k, id) => ({ request_id: id, results: demo.filter(x => (!q.trim().startsWith('>') || x.kind === 'command') && (k === 'all' || x.kind === k || (k === 'file' && x.kind === 'directory') || (k === 'app' && x.kind === 'system')) && x.name.toLowerCase().replaceAll(' ', '').includes(q.replace(/^>\s*/, '').toLowerCase().replaceAll(' ', ''))), version: 1, duration_ms: 0 }),
     Execute: async () => { throw Error('Open the desktop build to launch applications. This is a visual preview.'); },
@@ -143,7 +148,14 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
      <div id="detail-content" hidden>
       <header class="detail-header"><div id="detail-icon" class="detail-icon"></div><div class="detail-heading"><h2 id="detail-name"></h2><span id="detail-kind" class="type-badge"></span><span id="detail-pin" class="type-badge" hidden>Pinned</span></div></header>
       <dl class="detail-properties"><div><dt>Kind</dt><dd id="detail-type"></dd></div><div class="path-property"><dt>Path</dt><dd id="detail-path"></dd></div><div><dt>Version</dt><dd id="detail-version"></dd></div></dl><button id="detail-open" class="detail-action"></button>
-      <div id="detail-description" class="detail-description"><span id="detail-label"></span><p id="detail-subtitle"></p></div>
+      <div id="detail-description" class="detail-description"><span id="detail-label"></span><p id="detail-subtitle"></p>
+       <section id="codex-usage" aria-label="Codex usage remaining" hidden>
+        <div class="quota-heading"><span>Codex</span><button id="quota-refresh" class="icon-button" title="Refresh usage" aria-label="Refresh usage">${svg('refresh')}</button></div>
+        <div class="quota-window"><div><span>5 hours</span><strong id="quota-five-value">—</strong></div><progress id="quota-five-bar" max="100" value="0" aria-label="5-hour quota remaining" hidden></progress><small id="quota-five-reset"></small></div>
+        <div class="quota-window"><div><span>Weekly</span><strong id="quota-week-value">—</strong></div><progress id="quota-week-bar" max="100" value="0" aria-label="Weekly quota remaining" hidden></progress><small id="quota-week-reset"></small></div>
+        <div class="quota-resets"><span>Resets available</span><strong id="quota-resets">—</strong></div>
+        <small id="quota-status" role="status">Loading usage…</small>
+       </section></div>
      </div>
      <div id="detail-empty" class="detail-empty">${svg('search')}<p>Select a result to see its details</p></div>
     </section>
@@ -196,7 +208,7 @@ async function refreshState() { try {
 catch (e) {
     report(e);
 } }
-function setPanel(open: boolean) { panel = open; syncLayout(); $('settings-panel').hidden = !open; document.querySelector<HTMLElement>('.inner-frame')!.inert = open; if (open)
+function setPanel(open: boolean) { panel = open; if (open) clearTimeout(quotaTimer); else if (!$('codex-usage').hidden && results[selected]) void fetchQuota(results[selected].id, detailToken, false); syncLayout(); $('settings-panel').hidden = !open; document.querySelector<HTMLElement>('.inner-frame')!.inert = open; if (open)
     $('settings-close').focus();
 else
     input.focus(); }
@@ -241,12 +253,16 @@ function renderDetails() {
     const item = results[selected];
     $('detail-content').hidden = !item;
     $('detail-empty').hidden = Boolean(item);
-    if (!item) { detailedID = ''; detailToken++; clearTimeout(detailTimer); return; }
+    if (!item) { clearTimeout(quotaTimer); $('codex-usage').hidden = true; detailedID = ''; detailToken++; clearTimeout(detailTimer); return; }
     const fingerprint = JSON.stringify([item.id, item.path, item.subtitle, item.pinned]);
     if (detailedID === fingerprint) return;
     detailedID = fingerprint;
     const token = ++detailToken;
     clearTimeout(detailTimer);
+    clearTimeout(quotaTimer);
+    $('codex-usage').hidden = true;
+    $('detail-subtitle').hidden = false;
+    $('detail-content').classList.remove('has-usage');
     const labels: Record<string, string> = { app: 'Application', file: 'File', directory: 'Folder', command: 'Command', system: 'System action' };
     $('detail-name').textContent = item.name;
     $('detail-kind').textContent = labels[item.kind] || item.kind;
@@ -273,11 +289,57 @@ function renderDetails() {
     }
     detailTimer = setTimeout(() => { void api.Details(item.id).then(detail => {
         if (token !== detailToken || hidden) return;
+        if (detail.usage_provider === 'codex') {
+            $('detail-description').hidden = false;
+            $('detail-label').textContent = 'USAGE REMAINING';
+            $('detail-subtitle').hidden = true;
+            $('codex-usage').hidden = false;
+            $('detail-content').classList.add('has-usage');
+            renderQuota(null);
+            void fetchQuota(item.id, token, false);
+        }
         $('detail-path').textContent = detail.path || 'Not available';
         $('detail-version').textContent = detail.version || (item.kind === 'app' ? 'Not available' : 'Not applicable');
         $('detail-open').textContent = (detail.opener === 'VS Code' ? 'Open in VS Code' : detail.opener === 'File manager' ? 'Open in Files' : detail.opener === 'Default application' ? 'Open with default app' : detail.opener) + ' ↵';
     }).catch(() => { if (token === detailToken) $('detail-version').textContent = 'Not available'; }); }, 65);
 }
+let quotaTimer: ReturnType<typeof setTimeout>;
+let quotaRequest: Promise<CodexQuota> | undefined;
+function quotaResetTime(timestamp:number|null):string {
+    if (!timestamp) return '';
+    return `Resets ${new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(timestamp * 1000))}`;
+}
+function renderQuota(data:CodexQuota|null) {
+    for (const [prefix, quota] of [['quota-five',data?.five_hour],['quota-week',data?.weekly]] as const) {
+        $(`${prefix}-value`).textContent = quota ? `${Math.round(quota.remaining_percent)}% left` : data ? 'Not available' : '—';
+        const bar = $<HTMLProgressElement>(`${prefix}-bar`);
+        bar.hidden = !quota;
+        bar.value = quota?.remaining_percent || 0;
+        $(`${prefix}-reset`).textContent = quotaResetTime(quota?.resets_at || null);
+    }
+    $('quota-resets').textContent = data?.reset_credits == null ? (data ? 'Not available' : '—') : String(data.reset_credits);
+    const updated = data?.updated_at ? `Updated ${new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'}).format(new Date(data.updated_at * 1000))}` : '';
+    $('quota-status').textContent = data ? [data.stale ? 'Last known usage' : '',data.message,updated].filter(Boolean).join(' · ') : 'Loading usage…';
+}
+async function fetchQuota(id:string, token:number, refresh:boolean) {
+    if (hidden || panel || token !== detailToken || results[selected]?.id !== id) return;
+    clearTimeout(quotaTimer);
+    const button = $<HTMLButtonElement>('quota-refresh');
+    button.disabled = true;
+    if (!quotaRequest) quotaRequest = api.CodexUsage(id,refresh).finally(() => {quotaRequest = undefined;});
+    try {
+        const data = await quotaRequest;
+        if (!hidden && token === detailToken && results[selected]?.id === id) renderQuota(data);
+    } catch {
+        if (token === detailToken) $('quota-status').textContent = 'Cannot read usage. Open Codex and check sign-in.';
+    } finally {
+        if (token === detailToken) {
+            button.disabled = false;
+            if (!hidden && !panel) quotaTimer = setTimeout(() => {void fetchQuota(id,token,false);},30000);
+        }
+    }
+}
+$('quota-refresh').onclick = () => {if (results[selected]) void fetchQuota(results[selected].id,detailToken,true);};
 const iconRequests = new Map<string, Promise<string>>();
 function loadIcon(id: string): Promise<string> {
     if (iconCache.has(id)) return Promise.resolve(iconCache.get(id)!);
@@ -505,7 +567,7 @@ window.runtime?.EventsOn('pika:shown', () => {
     setPanel(false); focusSearchAfterActivation();
     void refreshState().then(() => setKind(kind));
 });
-window.runtime?.EventsOn('pika:hidden', () => { hidden = true; cancelAnimationFrame(focusFrame); shell.classList.add('is-armed'); version++; detailToken++; clearTimeout(searchTimer); clearTimeout(detailTimer); });
+window.runtime?.EventsOn('pika:hidden', () => { hidden = true; clearTimeout(quotaTimer); cancelAnimationFrame(focusFrame); shell.classList.add('is-armed'); version++; detailToken++; clearTimeout(searchTimer); clearTimeout(detailTimer); });
 window.runtime?.EventsOn('pika:index', () => { void refreshState().then(() => { if (!hidden && !composing) void search(true); }); });
 window.runtime?.EventsOn('pika:config', () => { void refreshState().then(() => { if (!hidden && !composing) { detailedID = ''; void search(true); } }); });
 void (async () => { await refreshState(); await search(); await api.FrontendReady(); if (!native) reveal(); input.focus(); })().catch(report);

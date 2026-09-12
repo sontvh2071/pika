@@ -53,3 +53,6 @@ The full native window stays centered at its configured size. Its 40px search ba
 
 
 Built-in `lock`, `logout`, and `shutdown` search results use Cinnamon's screen lock and native session dialogs; they remain available with personal commands disabled. Desktop apps launch in-process through GIO with a live parent for polkit authentication. The personal profile uses opaque monochrome panels, firmer type, and 8px panel spacing.
+
+
+ChatGPT/Codex app details include live remaining 5-hour and weekly quotas, reset times and available reset credits from the official Codex app-server API. Refreshes every 30 seconds while selected; no reset is consumed and no agent turn is created. See the Vietnamese guide for troubleshooting.

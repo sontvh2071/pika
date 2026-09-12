@@ -6,6 +6,10 @@ export function CenterWindow(arg1, arg2) {
   return window['go']['main']['App']['CenterWindow'](arg1, arg2);
 }
 
+export function CodexUsage(arg1, arg2) {
+  return window['go']['main']['App']['CodexUsage'](arg1, arg2);
+}
+
 export function Details(arg1) {
   return window['go']['main']['App']['Details'](arg1);
 }

@@ -106,3 +106,12 @@ Browser preview checked all three action details/icons, opaque rgb(21,21,21) sur
 Passed: internal race tests, go vet, Wails production build. Native smoke: 10 full focus cycles, 100 rapid toggles, cold launch search focus and clean shutdown, frontend readiness 438.4 ms. Real-profile diagnostic: 100 apps, 102 files/folders, 3 system actions, no warnings; confirms common home folders, VS Code routing and Go exclusions. Applied personal profile with backup and installed to ~/.local/bin/pika.
 
 Sources: https://docs.gtk.org/gio-unix/method.DesktopAppInfo.launch_uris_as_manager.html and installed Cinnamon menu/session-quit source for the native session commands.
+
+
+## 2026-09-12 — Codex quota details
+
+Added a quota-only app-server client: initialize → initialized → account/rateLimits/read. No task/turn, account mutation or reset-consumption methods are sent. Uses the desktop-bundled Codex CLI and existing Codex login; Pika never parses or logs authentication files. Child process is bounded by a 15-second timeout and reaped after each read.
+
+The provider maps windows by their actual duration (300 / 10080 minutes), prefers the codex bucket, computes remaining = clamp(100 - usedPercent), and uses rateLimitResetCredits.availableCount. Missing values remain unknown. The 30-second cache deduplicates requests; stale last-known data is marked and timestamped after failures. Manual refresh has a 5-second minimum interval.
+
+Validation: parser/protocol/cache race tests and go vet passed. The real provider diagnostic returned 36% five-hour remaining, 90% weekly remaining and 2 reset credits at that sample time. These are transient observations, not defaults. Browser preview uses clearly labeled sample data; verified quota bars, reset timestamps, refresh button, hidden quota when switching to Firefox, and full content fitting the 470px panel without scrolling. Official documentation: https://learn.chatgpt.com/docs/app-server

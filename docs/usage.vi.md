@@ -405,3 +405,25 @@ Nhấn Alt+Space, gõ một trong các từ sau, chọn kết quả và Enter:
 Các mục này thuộc **System action**, tìm được trong All hoặc Apps ngay cả khi `include_commands = false`. `logout` và `shutdown` gọi hộp thoại hệ thống, không dùng lệnh tắt máy trực tiếp hoặc tùy chọn bỏ qua xác nhận. Lựa chọn cụ thể phụ thuộc khả năng và cấu hình Cinnamon; ví dụ Suspend có thể bị vô hiệu hóa khi hệ thống không hỗ trợ.
 
 Profile hiện tại dùng khoảng cách 8px, cỡ chữ cơ sở 16px, chữ tiêu đề đậm hơn và viền xám rõ. Các khung dùng nền đặc; phần ngoài khung vẫn trong suốt. Hiệu ứng co giãn cả vùng chữ đã được bỏ để giảm nhòe khi launcher hiện lên.
+
+
+### Quota Codex trong chi tiết ChatGPT
+
+Tìm `ChatGPT` (ứng dụng Codex) rồi chọn ứng dụng. Cột phải có **Usage remaining**:
+
+- **5 hours**: phần trăm quota 5 giờ còn lại và thời điểm làm mới.
+- **Weekly**: phần trăm quota tuần còn lại và thời điểm làm mới.
+- **Resets available**: số lượt reset còn lại do Codex cung cấp.
+
+Pika tự cập nhật mỗi 30 giây khi bạn đang xem mục này; nút ↻ làm mới theo yêu cầu (giới hạn tối thiểu 5 giây giữa các lần đọc). Pika không dùng lượt reset. Không có dữ liệu sẽ hiện `Not available`; lỗi kết nối giữ dữ liệu lần trước kèm `Last known usage` và thời điểm cập nhật.
+
+Nguồn là API chỉ đọc `account/rateLimits/read` của [Codex App Server](https://learn.chatgpt.com/docs/app-server). Pika ưu tiên CLI đi kèm app tại `/usr/lib/chatgpt/resources/codex`, dùng đăng nhập Codex hiện có. Không cần API key riêng và không tạo task/turn để đọc quota. Trường `availableCount` là số reset chính thức, không phải số tiền credits hay số dòng trong danh sách reset.
+
+Nếu không thấy số liệu, mở Codex kiểm tra đăng nhập và kết nối. Có thể chạy chẩn đoán chỉ đọc:
+
+```sh
+cd /home/lilmint/workspace/me/pika
+go run ./scripts/check-codex-usage
+```
+
+Preview trình duyệt dùng số minh họa và có nhãn `Preview example`; bản desktop lấy số thực từ tài khoản.
