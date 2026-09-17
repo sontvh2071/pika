@@ -18,6 +18,10 @@ export function Execute(arg1) {
   return window['go']['main']['App']['Execute'](arg1);
 }
 
+export function FinishHide(arg1) {
+  return window['go']['main']['App']['FinishHide'](arg1);
+}
+
 export function FrontendReady() {
   return window['go']['main']['App']['FrontendReady']();
 }
@@ -36,6 +40,10 @@ export function Icon(arg1) {
 
 export function OpenConfig() {
   return window['go']['main']['App']['OpenConfig']();
+}
+
+export function PresentationReady(arg1) {
+  return window['go']['main']['App']['PresentationReady'](arg1);
 }
 
 export function Quit() {

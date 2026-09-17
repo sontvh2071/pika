@@ -47,7 +47,8 @@ with tempfile.TemporaryDirectory(prefix="pika-smoke-") as tmp:
                 raise RuntimeError("Native frontend did not become ready")
             ready_ms = (time.perf_counter() - started) * 1000
             stats = json.loads(result.stdout)
-            wait_focus(False)
+            initial = wait_focus(False)
+            assert not initial["surface_ready"], "Cold GTK surface was exposed before the first frontend paint"
             # This is the same IPC toggle command as the Cinnamon shortcut.
             # Check native keyboard ownership AND the WebKit search input.
             for _ in range(10):
@@ -57,8 +58,16 @@ with tempfile.TemporaryDirectory(prefix="pika-smoke-") as tmp:
                 wait_focus(False)
             for _ in range(100):
                 cli("toggle")
+            # A pending fade/fallback from an older hide must not unmap a new show.
+            cli("show")
+            wait_focus(True)
+            time.sleep(.45)
+            wait_focus(True)
+            fade_started = time.perf_counter()
             cli("hide")
             wait_focus(False)
+            hide_ms = (time.perf_counter() - fade_started) * 1000
+            assert hide_ms >= 80, f"Hide skipped its exit animation: {hide_ms:.1f} ms"
             cli("reload-config")
             cli("reindex")
             assert gui.poll() is None, "Window lifecycle killed the process"
@@ -70,13 +79,16 @@ with tempfile.TemporaryDirectory(prefix="pika-smoke-") as tmp:
             wait_focus(True)
             cli("stats")
             cli("hide")
+            wait_focus(False)
             cli("quit")
             deadline = time.monotonic() + 8
             while (root / "runtime/pika/control.sock").exists() and time.monotonic() < deadline:
                 time.sleep(.05)
             assert not (root / "runtime/pika/control.sock").exists(), "Cold-start process did not shut down"
             print(json.dumps({"frontend_ready_ms": round(ready_ms, 1), "toggle_calls": 100,
-                              "apps": stats["apps"], "focus_cycles": 10, "cold_toggle": "search focused", "shutdown": "clean"}, indent=2))
+                              "apps": stats["apps"], "focus_cycles": 10, "cold_toggle": "search focused",
+                              "startup_surface": "guarded", "hide_ms": round(hide_ms, 1),
+                              "stale_hide": "cancelled", "shutdown": "clean"}, indent=2))
         finally:
             if gui.poll() is None:
                 cli("quit", check=False)

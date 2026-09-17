@@ -39,6 +39,34 @@ static GtkWindow *pika_window(void) {
     return found;
 }
 
+// Wails 2.15 queues StartHidden's hide but synchronously calls show_all.
+// Guard that first map before WebKit has painted, including --background.
+static gboolean pika_first_realize(GSignalInvocationHint *hint, guint count, const GValue *values, gpointer unused) {
+    GtkWidget *widget = g_value_get_object(&values[0]);
+    // Wails also queues the title assignment, so it is not available yet.
+    // Match the process-local toplevel containing our WebKit view instead.
+    if (!GTK_IS_WINDOW(widget) || !pika_webview(widget)) return TRUE;
+    gtk_widget_set_opacity(widget, 0.0);
+    gtk_window_set_focus_on_map(GTK_WINDOW(widget), FALSE);
+    gtk_window_set_accept_focus(GTK_WINDOW(widget), FALSE);
+    GtkCssProvider *css = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(css, "window { background-color: transparent; background-image: none; }", -1, NULL);
+    gtk_style_context_add_provider(gtk_widget_get_style_context(widget), GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(css);
+    return FALSE; // Only the first realization of our own launcher.
+}
+static void pika_install_presentation(void) {
+    gpointer klass = g_type_class_ref(GTK_TYPE_WIDGET);
+    g_signal_add_emission_hook(g_signal_lookup("realize", GTK_TYPE_WIDGET), 0, pika_first_realize, NULL, NULL);
+    g_type_class_unref(klass);
+}
+static gboolean pika_present_on_main(gpointer unused) {
+    GtkWindow *window = pika_window();
+    if (window) gtk_widget_set_opacity(GTK_WIDGET(window), 1.0);
+    return G_SOURCE_REMOVE;
+}
+static void pika_present(void) { g_idle_add(pika_present_on_main, NULL); }
+
 static gboolean pika_focus_on_main(gpointer data) {
     if (GPOINTER_TO_INT(data) != g_atomic_int_get(&pika_focus_generation)) return G_SOURCE_REMOVE;
     GtkWindow *window = pika_window();
@@ -72,6 +100,7 @@ static gboolean pika_read_focus_on_main(gpointer unused) {
     GtkWindow *window = pika_window();
     if (window) {
         if (gtk_widget_get_mapped(GTK_WIDGET(window))) flags |= 1;
+        if (gtk_widget_get_opacity(GTK_WIDGET(window)) > 0.99) flags |= 8;
         if (gtk_window_is_active(window)) flags |= 2;
         GtkWidget *webview = pika_webview(GTK_WIDGET(window));
         if (webview && gtk_window_get_focus(window) == webview) flags |= 4;
@@ -96,19 +125,21 @@ import (
 
 var focusSnapshotMu sync.Mutex
 
-func focusLauncher()       { C.pika_request_focus() }
-func cancelLauncherFocus() { C.pika_cancel_focus() }
-func nativeFocusState() (mapped, active, webview bool) {
+func focusLauncher()               { C.pika_request_focus() }
+func cancelLauncherFocus()         { C.pika_cancel_focus() }
+func installLauncherPresentation() { C.pika_install_presentation() }
+func presentLauncher()             { C.pika_present() }
+func nativeFocusState() (mapped, active, webview, surfaceReady bool) {
 	focusSnapshotMu.Lock()
 	defer focusSnapshotMu.Unlock()
 	C.pika_request_snapshot()
 	deadline := time.Now().Add(500 * time.Millisecond)
 	for C.pika_snapshot_done() == 0 {
 		if time.Now().After(deadline) {
-			return false, false, false
+			return false, false, false, false
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
 	flags := int(C.pika_snapshot_flags())
-	return flags&1 != 0, flags&2 != 0, flags&4 != 0
+	return flags&1 != 0, flags&2 != 0, flags&4 != 0, flags&8 != 0
 }

@@ -12,6 +12,8 @@ export function Details(arg1:string):Promise<launcher.Details>;
 
 export function Execute(arg1:string):Promise<void>;
 
+export function FinishHide(arg1:number):Promise<void>;
+
 export function FrontendReady():Promise<void>;
 
 export function GetState():Promise<main.AppState>;
@@ -21,6 +23,8 @@ export function Hide():Promise<void>;
 export function Icon(arg1:string):Promise<string>;
 
 export function OpenConfig():Promise<void>;
+
+export function PresentationReady(arg1:number):Promise<void>;
 
 export function Quit():Promise<void>;
 

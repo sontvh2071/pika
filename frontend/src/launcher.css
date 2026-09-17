@@ -317,7 +317,10 @@ h1 {
 @media(prefers-reduced-motion:reduce) { * { transition:none!important; scroll-behavior:auto!important; } }
 /* Calm graphite surfaces and lightweight motion for the native WebKit view. */
 :root { font-family: Ubuntu, 'Noto Sans', system-ui, sans-serif; --motion-curve:cubic-bezier(.22,1,.36,1); }
-.launcher.is-armed { opacity:0; }
+.launcher.is-armed { opacity:0; transform:translateY(12px) scale(.92); }
+/* Top-center keeps the whole transition inside the native transparent frame.
+   The resting state is untransformed, with crisp text and a fixed search anchor. */
+.launcher { transform-origin:50% 0; will-change:transform,opacity; }
 #results { position:relative; isolation:isolate; }
 #selection-highlight { position:absolute; top:0; left:0; right:0; border-radius:8px; background:var(--selection); border:1px solid color-mix(in srgb,var(--text) 8%,transparent); pointer-events:none; z-index:0; transition:transform 230ms var(--motion-curve); }
 #selection-highlight.instant { transition:none; }
@@ -348,10 +351,11 @@ h1 {
 .swatches i:nth-child(3) { background:var(--text); }
 .swatches i:nth-child(4) { background:var(--muted); }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+@media(prefers-reduced-motion:reduce) { .launcher { transform:none!important; } }
 
 /* Results reveal beneath a fixed search anchor in the full-size frame. */
-.workspace:not([hidden]) { animation:results-reveal 180ms var(--motion-curve); }
-@keyframes results-reveal { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+.workspace:not([hidden]) { animation:results-reveal 140ms var(--motion-curve); }
+@keyframes results-reveal { from { opacity:0; } to { opacity:1; } }
 
 /* Browser preview is a monitor-sized stage. Center the bounds of the entire
    native-sized launcher, not just its search bar or its results individually. */

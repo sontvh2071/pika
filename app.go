@@ -22,6 +22,8 @@ type App struct {
 	mu                       sync.Mutex
 	ready, visible, quitting bool
 	initialShow              bool
+	presentation             uint64
+	hideTimer                *time.Timer
 	dispatching              atomic.Bool
 	frontendFocus            atomic.Uint32
 	stopSignals              func()
@@ -50,6 +52,9 @@ func (a *App) startup(ctx context.Context) {
 	a.server.Serve(a.control)
 }
 func (a *App) shutdown(ctx context.Context) {
+	a.mu.Lock()
+	a.cancelHideLocked()
+	a.mu.Unlock()
 	cancelLauncherFocus()
 	if a.stopSignals != nil {
 		a.stopSignals()
@@ -63,24 +68,65 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	if a.quitting {
 		return false
 	}
-	a.visible = false
-	cancelLauncherFocus()
-	runtime.WindowHide(ctx)
-	runtime.EventsEmit(ctx, "pika:hidden")
+	a.hideLocked()
 	return true
 }
 func (a *App) showLocked() {
-	runtime.WindowShow(a.ctx)
+	if a.visible {
+		focusLauncher()
+		return
+	}
+	a.cancelHideLocked()
+	a.presentation++
 	runtime.WindowCenter(a.ctx)
+	runtime.WindowShow(a.ctx)
 	focusLauncher()
 	a.visible = true
-	runtime.EventsEmit(a.ctx, "pika:shown")
+	runtime.EventsEmit(a.ctx, "pika:shown", a.presentation)
 }
 func (a *App) hideLocked() {
+	if !a.visible {
+		return
+	}
 	cancelLauncherFocus()
-	runtime.WindowHide(a.ctx)
 	a.visible = false
-	runtime.EventsEmit(a.ctx, "pika:hidden")
+	a.presentation++
+	token := a.presentation
+	runtime.EventsEmit(a.ctx, "pika:hiding", token)
+	// The frontend acknowledges the completed fade. A suspended/broken
+	// WebView must never leave an invisible window owning the keyboard.
+	a.hideTimer = time.AfterFunc(350*time.Millisecond, func() { a.FinishHide(token) })
+}
+func (a *App) cancelHideLocked() {
+	if a.hideTimer != nil {
+		a.hideTimer.Stop()
+		a.hideTimer = nil
+	}
+}
+func (a *App) hideNowLocked() {
+	a.cancelHideLocked()
+	cancelLauncherFocus()
+	a.visible = false
+	a.presentation++
+	runtime.WindowHide(a.ctx)
+	runtime.EventsEmit(a.ctx, "pika:hidden", a.presentation)
+}
+func (a *App) FinishHide(token uint64) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if token != a.presentation || a.visible || a.quitting {
+		return
+	}
+	a.hideNowLocked()
+}
+
+// Called after the frontend has submitted its first styled layout frames.
+func (a *App) PresentationReady(token uint64) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if token == a.presentation && a.visible && !a.quitting {
+		presentLauncher()
+	}
 }
 func (a *App) FrontendReady() {
 	a.mu.Lock()
@@ -107,7 +153,9 @@ func (a *App) Execute(id string) error {
 	defer a.dispatching.Store(false)
 	// Release keyboard ownership and the always-on-top surface before the
 	// desktop opens an authentication or session dialog.
-	a.Hide()
+	a.mu.Lock()
+	a.hideNowLocked()
+	a.mu.Unlock()
 	if e := a.service.Execute(id); e != nil {
 		a.mu.Lock()
 		a.showLocked()
@@ -129,12 +177,12 @@ func (a *App) ReportFocus(documentFocused, queryFocused bool) {
 	a.frontendFocus.Store(flags)
 }
 func (a *App) focusState() map[string]bool {
-	mapped, active, webview := nativeFocusState()
+	mapped, active, webview, surfaceReady := nativeFocusState()
 	flags := a.frontendFocus.Load()
 	a.mu.Lock()
 	visible := a.visible
 	a.mu.Unlock()
-	return map[string]bool{"visible": visible, "mapped": mapped, "window_active": active, "webview_focused": webview, "document_focused": flags&1 != 0, "query_focused": flags&2 != 0}
+	return map[string]bool{"visible": visible, "mapped": mapped, "window_active": active, "webview_focused": webview, "document_focused": flags&1 != 0, "query_focused": flags&2 != 0, "surface_ready": surfaceReady}
 }
 func (a *App) CodexUsage(id string, refresh bool) (codexusage.Snapshot, error) {
 	return a.service.CodexUsage(id, refresh)
@@ -172,6 +220,7 @@ func (a *App) ReloadConfig() error {
 func (a *App) Quit() {
 	a.mu.Lock()
 	a.quitting = true
+	a.cancelHideLocked()
 	cancelLauncherFocus()
 	a.mu.Unlock()
 	go func() { time.Sleep(100 * time.Millisecond); runtime.Quit(a.ctx) }()

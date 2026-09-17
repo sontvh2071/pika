@@ -14,6 +14,9 @@ import (
 var assets embed.FS
 
 func runWindow(app *App, cfg config.Config) error {
+	// Install before Wails constructs/maps its GTK window, not in OnStartup
+	// (which runs asynchronously and can miss the first native frame).
+	installLauncherPresentation()
 	return wails.Run(&options.App{
 		Title: "Pika", Width: cfg.Window.Width, Height: cfg.Window.Height,
 		MinWidth: 480, MinHeight: 380, Frameless: true, DisableResize: true,

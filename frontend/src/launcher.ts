@@ -1,5 +1,5 @@
 import './launcher.css';
-import { reveal, selectIcon, revealDetails } from './motion';
+import { reveal, dismiss, conceal, selectIcon, revealDetails } from './motion';
 type Item = {
     id: string;
     kind: string;
@@ -60,6 +60,8 @@ type API = {
     CodexUsage(id:string, refresh:boolean): Promise<CodexQuota>;
     Hide(): Promise<void>;
     FrontendReady(): Promise<void>;
+    PresentationReady(token: number): Promise<void>;
+    FinishHide(token: number): Promise<void>;
     ReportFocus(documentFocused: boolean, queryFocused: boolean): Promise<void>;
     CenterWindow(width: number, height: number): Promise<void>;
     OpenConfig(): Promise<void>;
@@ -76,7 +78,7 @@ declare global {
             };
         };
         runtime?: {
-            EventsOn(name: string, fn: () => void): () => void;
+            EventsOn(name: string, fn: (token: number) => void): () => void;
         };
     }
 }
@@ -118,6 +120,8 @@ const api: API = window.go?.main.App || {
     GetState: async () => previewState,
     ReportFocus: async () => {},
     CenterWindow: async () => {},
+    PresentationReady: async () => {},
+    FinishHide: async () => {},
     CodexUsage: async () => ({five_hour:{remaining_percent:64,resets_at:1893456000},weekly:{remaining_percent:81,resets_at:1894060800},reset_credits:3,updated_at:0,stale:false,message:'Preview example · desktop reads live usage'}),
     Details: async id => { const x = demo.find(item => item.id === id)!; return {usage_provider:x.id === 'app:chatgpt.desktop' ? 'codex' : undefined,kind:x.kind,path:x.path,version:'',opener:x.kind === 'system' ? (x.id === 'system:lock' ? 'Lock screen' : 'Show options') : x.path.startsWith('/home/lilmint/workspace/') ? 'VS Code' : x.kind === 'directory' ? 'File manager' : 'Launch application'}; },
     SetTheme: async name => { previewState.config.appearance.theme = name; },
@@ -179,12 +183,12 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
  </main>`;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = $<HTMLInputElement>('query');
-let state: AppState = previewState, kind = 'all', results: Item[] = [], selected = 0, version = 0, composing = false, busy = false, panel = false, hidden = false;
+let state: AppState = previewState, kind = 'all', results: Item[] = [], selected = 0, version = 0, composing = false, busy = false, panel = false, hidden = native;
 let pending = false, searchTimer: ReturnType<typeof setTimeout>, detailTimer: ReturnType<typeof setTimeout>, detailToken = 0, detailedID = '';
 const rowCache = new Map<string, HTMLElement>();
 const highlight = document.getElementById('selection-highlight')!;
 const shell = document.querySelector<HTMLElement>('.launcher')!;
-if (native) shell.classList.add('is-armed');
+shell.classList.add('is-armed');
 let toastTimer: ReturnType<typeof setTimeout>;
 const iconCache = new Map<string, string>();
 function toast(message: string) { clearTimeout(toastTimer); $('message').textContent = message; $('message').hidden = false; toastTimer = setTimeout(() => { $('message').hidden = true; }, 5000); }
@@ -466,9 +470,17 @@ function queueSearch() {
 }
 async function execute() { if (busy || pending || composing || !results[selected])
     return; busy = true; const id = results[selected].id; try {
+    if (native) {
+        const token = presentation;
+        // Finish the visual exit first. Execute still unmaps the native window
+        // before GIO launches anything, so auth dialogs receive focus normally.
+        const completed = await dismiss(shell);
+        if (!completed || token !== presentation) return;
+    }
     await api.Execute(id);
 }
 catch (e) {
+    if (native && !hidden) void reveal(shell);
     report(e);
 }
 finally {
@@ -561,13 +573,45 @@ window.addEventListener('focus', focusSearchAfterActivation);
 window.addEventListener('blur', () => { cancelAnimationFrame(focusFrame); reportFocus(); });
 input.addEventListener('focus', reportFocus);
 input.addEventListener('blur', reportFocus);
-window.runtime?.EventsOn('pika:shown', () => {
-    hidden = false; version++; detailedID = ''; shell.classList.remove('is-armed'); reveal();
+let presentation = 0, painted = false;
+const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+function stopHiddenWork() {
+    hidden = true; shell.inert = true;
+    clearTimeout(quotaTimer); cancelAnimationFrame(focusFrame);
+    version++; detailToken++; clearTimeout(searchTimer); clearTimeout(detailTimer);
+}
+window.runtime?.EventsOn('pika:shown', token => {
+    if (token <= presentation) return;
+    presentation = token;
+    hidden = false; shell.inert = false; version++; detailedID = '';
     if (!state.config.window.remember_query) { input.value = ''; kind = 'all'; results = []; }
     setPanel(false); focusSearchAfterActivation();
-    void refreshState().then(() => setKind(kind));
+    // Use the already-loaded config immediately; opening should not wait on IO.
+    setKind(kind);
+    void (async () => {
+        if (!painted) { await nextFrame(); await nextFrame(); }
+        if (presentation !== token || hidden) return;
+        await api.PresentationReady(token);
+        if (presentation !== token || hidden) return;
+        painted = true;
+        await reveal(shell);
+    })().catch(report);
 });
-window.runtime?.EventsOn('pika:hidden', () => { hidden = true; clearTimeout(quotaTimer); cancelAnimationFrame(focusFrame); shell.classList.add('is-armed'); version++; detailToken++; clearTimeout(searchTimer); clearTimeout(detailTimer); });
+window.runtime?.EventsOn('pika:hiding', token => {
+    if (token <= presentation) return;
+    presentation = token; stopHiddenWork();
+    void dismiss(shell).then(async completed => {
+        if (completed && presentation === token) await api.FinishHide(token);
+    }).catch(report);
+});
+window.runtime?.EventsOn('pika:hidden', token => {
+    if (token <= presentation) return;
+    presentation = token; stopHiddenWork(); conceal(shell);
+});
 window.runtime?.EventsOn('pika:index', () => { void refreshState().then(() => { if (!hidden && !composing) void search(true); }); });
 window.runtime?.EventsOn('pika:config', () => { void refreshState().then(() => { if (!hidden && !composing) { detailedID = ''; void search(true); } }); });
-void (async () => { await refreshState(); await search(); await api.FrontendReady(); if (!native) reveal(); input.focus(); })().catch(report);
+void (async () => {
+    await refreshState(); await search(); await document.fonts.ready;
+    await api.FrontendReady();
+    if (!native) { void reveal(shell); input.focus(); }
+})().catch(report);

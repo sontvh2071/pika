@@ -51,6 +51,8 @@ Personal Mint profile (monochrome black/white, home search excluding ~/go and ~/
 
 The full native window stays centered at its configured size. Its 40px search bar stays fixed at the top of that frame; result/detail panels appear below only for a nonblank query with matches. Empty and no-match states hide the panels without resizing or recentering the window. The unused area is transparent; settings uses the same frame.
 
+Startup guards the native GTK surface until the styled frontend is ready. Show/hide uses a reversible slide-and-scale transition (120/80 ms): expand from 92% scale and 12px below the resting position, then retract along the same path. The top-center origin keeps it inside the native frame. Reduced motion skips it; rapid toggles cancel stale hides and preserve the current pose. At rest, text is untransformed and the search anchor stays fixed while results change. Motion regressions: `cd frontend && npm test` (Node 22.6+); real window lifecycle: `python3 scripts/native-smoke.py`.
+
 
 Built-in `lock`, `logout`, and `shutdown` search results use Cinnamon's screen lock and native session dialogs; they remain available with personal commands disabled. Desktop apps launch in-process through GIO with a live parent for polkit authentication. The personal profile uses opaque monochrome panels, firmer type, and 8px panel spacing.
 

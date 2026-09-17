@@ -115,3 +115,24 @@ Added a quota-only app-server client: initialize → initialized → account/rat
 The provider maps windows by their actual duration (300 / 10080 minutes), prefers the codex bucket, computes remaining = clamp(100 - usedPercent), and uses rateLimitResetCredits.availableCount. Missing values remain unknown. The 30-second cache deduplicates requests; stale last-known data is marked and timestamped after failures. Manual refresh has a 5-second minimum interval.
 
 Validation: parser/protocol/cache race tests and go vet passed. The real provider diagnostic returned 36% five-hour remaining, 90% weekly remaining and 2 reset credits at that sample time. These are transient observations, not defaults. Browser preview uses clearly labeled sample data; verified quota bars, reset timestamps, refresh button, hidden quota when switching to Firefox, and full content fitting the 470px panel without scrolling. Official documentation: https://learn.chatgpt.com/docs/app-server
+
+## 2026-09-17 — Startup surface and reversible show/hide motion
+
+Installed Wails 2.15 Linux source queues `Hide()` for `StartHidden` but calls `gtk_widget_show_all` synchronously. The title is also assigned asynchronously. A process-local GTK realization hook now guards the first WebKit toplevel with native opacity zero and disabled focus-on-map before that initial mapping. It applies a transparent GTK background and releases opacity only after frontend style/font readiness and two animation frames following the first requested show. Critical transparent document styling is inline in index.html. This avoids depending on asynchronous OnStartup to catch the first native frame.
+
+One whole-launcher opacity animation replaces separate 260/300 ms entrance fades: 180 ms entrance, 110 ms exit, reversible from the current opacity. Result panels fade in over 140 ms with no translation. Search geometry and text scale stay fixed. Backend presentation tokens reject stale acknowledgements, cancellation stops pending hides, and a 350 ms fallback releases the window if the frontend fails to finish. Enter fades before Execute, whose native unmap still precedes app/auth-dialog launch. Reduced-motion skips the animation. Config is already cached at show time instead of requiring GetState for every opening.
+
+Passed: production Wails/TypeScript build, `go vet -tags webkit2_41 ./...`, internal race tests, and three frontend motion tests covering rapid reversal, interrupted hide/handoff and reduced motion. Final native smoke: frontend ready 475.1 ms; startup opacity guard asserted; 10 full native/DOM focus cycles; 100 rapid toggles; stale hide did not close the reopened window after 450 ms; measured hide completion 183.4 ms including CLI and 50 ms polling; cold toggle focused search; clean shutdown. The 110 ms animation duration is not the same as this end-to-end sampled latency.
+
+Browser preview: empty/matching/no-match search stayed at x=280, y=100, width=720, height=40 in a 1280×720 viewport. Full frame remained 720×520, result gap 8 px, workspace transform none, no browser console errors; final screenshot inspected. Native checks assert lifecycle/focus/opacity state, not pixel-by-pixel screen recordings or an FPS benchmark. Apple motion guidance informed the restrained transitions; timings are Pika's own, not measured Spotlight timings: https://developer.apple.com/design/human-interface-guidelines/motion
+
+### Follow-up — visible slide and expansion
+
+User requested perceptible spatial movement instead of fading in place. Launcher entrance now expands from scale 0.92 and translateY(12px) to its untransformed resting pose over 240 ms; exit retracts over 160 ms. Transform origin is top-center, keeping the moving contents within the native bounds. Search/results layout remains unchanged; only opening/closing the launcher transforms the whole surface. Animation reversal captures both computed opacity and transform before cancellation; reduced motion disables the transform as well as the animation. This supersedes the opacity-only 180/110 ms transition above.
+
+Passed production TypeScript/Wails build and all three motion regression tests, including interrupted transform continuity and final untransformed pose. Native smoke passed: readiness 448.8 ms, guarded startup surface, 10 focus cycles, 100 rapid toggles, cancellation of stale hides, cold-start search focus, clean shutdown. Sampled hide completion was 271.9 ms including CLI and polling, not a frame-time measurement. No FPS or pixel-recording claims.
+
+
+### Timing adjustment — 120/80 ms
+
+Per user request, halved the slide/scale entrance from 240 to 120 ms and exit from 160 to 80 ms. Geometry and easing are unchanged. Updated duration assertions and user documentation. All three motion tests and production build passed; installed and restarted the app, verified all focus/readiness flags on show and native unmapping on hide. Pika remains ready in the background for Alt+Space.

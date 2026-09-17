@@ -427,3 +427,22 @@ go run ./scripts/check-codex-usage
 ```
 
 Preview trình duyệt dùng số minh họa và có nhãn `Preview example`; bản desktop lấy số thực từ tài khoản.
+
+### Hiệu ứng hiện/ẩn và khởi động
+
+Bản cập nhật ngày 17/09/2026 chặn khung hình GTK ban đầu cho tới khi frontend đã nạp style/font và gửi khung hình đầu. Hiệu ứng hiện mới kéo dài 120 ms: launcher trượt lên 12px, phóng từ 92% đến kích thước thật và rõ dần; khi ẩn, launcher thu nhỏ/trượt xuống và mờ đi trong 80 ms. Tâm phóng ở chính giữa cạnh trên, toàn bộ chuyển động nằm trong khung cửa sổ. Khi kết thúc, chữ trở về kích thước thật; search không đổi vị trí khi hai cột hiện/ẩn theo truy vấn. Hai cột kết quả fade trong 140 ms. Khi bấm Alt+Space liên tiếp, hiệu ứng đảo chiều từ vị trí, kích thước và độ mờ hiện tại. Nếu hệ thống báo `prefers-reduced-motion`, hiệu ứng được bỏ qua.
+
+Enter chạy hiệu ứng ẩn trước, rồi đóng bề mặt launcher và mở ứng dụng để hộp thoại yêu cầu mật khẩu nhận focus. Escape/Alt+Space đợi fade hoàn tất trước khi ẩn cửa sổ; có timeout dự phòng 350 ms nếu frontend không phản hồi.
+
+Autostart vẫn chạy `pika --background`, phím tắt vẫn là `pika toggle`; không cần cấu hình lại. Sau khi tự build một phiên bản mới, cập nhật và khởi động lại bằng:
+
+```sh
+cd /home/lilmint/workspace/me/pika
+wails build -tags webkit2_41
+python3 scripts/install.py install
+~/.local/bin/pika quit
+sleep 1
+~/.local/bin/pika --background
+```
+
+Chờ tiến trình cũ thoát trước khi chạy lại (lệnh `quit` cần khoảng 100 ms). `pika focus-state` có thêm `surface_ready`: giá trị `false` khi đang chặn bề mặt lúc khởi động; sau lần hiện đầu tiên sẽ là `true` vì WebKit đã sẵn sàng.
