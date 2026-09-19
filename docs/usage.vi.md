@@ -447,3 +447,10 @@ Chờ tiến trình cũ thoát trước khi chạy lại (lệnh `quit` cần kh
 ### Bóng đổ tối giản
 
 Pika có bóng đen mềm hai lớp quanh search, hai cột và Settings: một lớp sát mép, một lớp tỏa xuống dưới. Lề ngoài 48px hoàn toàn trong suốt để bóng không bị cắt; click trong lề này đi xuyên xuống ứng dụng bên dưới. Đây không phải padding của nội dung: cấu hình `width`/`height` vẫn là kích thước phần launcher, gap giữa các khung vẫn 8px. Với profile 720×520, cửa sổ native là 816×616 và phần nội dung giữ nguyên vị trí ở giữa. Hiệu ứng hiện/ẩn vẫn 120/80 ms. Không cần đổi config.
+
+
+### Htop mở bằng WezTerm
+
+Tài khoản cá nhân có desktop entry `~/.local/share/applications/htop.desktop` ghi đè mục Htop của hệ thống, với `Exec=/usr/bin/wezterm start -- /usr/bin/htop` và `Terminal=false`. Vì WezTerm tự tạo cửa sổ terminal, Linux không bọc thêm terminal mặc định. Tên và icon Htop vẫn giữ nguyên. Cấu hình áp dụng cho Pika lẫn menu ứng dụng; không đổi terminal của các ứng dụng khác.
+
+Sau khi chỉnh entry, chạy `pika reindex`. Để khôi phục, đổi tên file override thành `htop.desktop.disabled` rồi chạy `pika reindex`; Linux sẽ dùng lại entry gốc trong `/usr/share/applications`.

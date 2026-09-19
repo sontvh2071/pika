@@ -152,3 +152,8 @@ Reserved a symmetric 48px transparent native gutter outside config content dimen
 Passed TypeScript/Wails production builds and go vet. Native smoke passed: frontend ready 440.9 ms, guarded startup, 10 focus cycles, 100 rapid toggles, stale-hide cancellation, cold-toggle focus, reload/reindex and clean shutdown. Installed build read-only X11 inspection measured native size 816×616 and input region (48,48,720,520), verifying the shadow gutter is excluded from pointer input. All seven focus/readiness flags passed, then app was left hidden in the background.
 
 Browser preview screenshot inspected; computed shadows matched both layers. Empty/matching/cleared states retained the 720×520 content frame with search at (280,100,720,40) in a 1280×720 viewport. Gap stayed 8px; content-responsive results/detail padding stayed 6px/12px. No console errors. Native pixel recordings or FPS benchmarking were not performed.
+
+
+## Htop terminal preference
+
+Created user-level htop.desktop from the system entry, preserving its localized names/icon and changing Exec to `/usr/bin/wezterm start -- /usr/bin/htop`, Terminal to false. desktop-file-validate passed. Requested Pika reindex. Launched the exact entry with GIO and confirmed WezTerm CLI reported a pane titled `htop`. No Pika code/build or global default-terminal changes were needed.
