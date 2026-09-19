@@ -390,3 +390,21 @@ h1 {
 .quota-window small,#quota-status { display:block; color:var(--muted); font-size:10px; line-height:1.5; }
 .quota-resets { padding:9px 0; border-top:1px solid var(--border); }
 #quota-status { margin-top:4px; }
+
+/* Sensors are a read-only detail view, with no terminal or extra window. */
+.has-sensors { height:100%; display:flex; flex-direction:column; min-height:0; }
+.has-sensors>.detail-properties,.has-sensors>.detail-action,.has-sensors>.detail-description { display:none; }
+.has-sensors>.detail-header { flex:none; }
+#sensors-view { display:flex; flex-direction:column; flex:1; min-height:0; padding-top:12px; }
+.sensors-toolbar { display:flex; align-items:center; justify-content:space-between; font-size:10px; color:var(--muted); letter-spacing:.6px; flex:none; }
+.sensors-status { margin:3px 0 10px; font-size:11px; color:var(--muted); line-height:1.5; flex:none; }
+#sensors-readings { overflow:auto; min-height:0; flex:1; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+#sensors-readings h3 { margin:12px 0 5px; font:500 11px ui-monospace,monospace; color:var(--muted); overflow-wrap:anywhere; }
+#sensors-readings h3:first-child { margin-top:0; }
+#sensors-readings dl { margin:0; }
+#sensors-readings dl>div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 8px; padding:7px 0; border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent); }
+#sensors-readings dt { font-size:12px; overflow-wrap:anywhere; }
+#sensors-readings dd { margin:0; font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; }
+#sensors-readings small { grid-column:1/-1; font-size:10px; color:var(--muted); }
+.sensors-note { font-size:10px; line-height:1.5; color:var(--muted); margin:10px 0 0; flex:none; }
+#sensors-view.is-stale #sensors-readings { opacity:.55; }

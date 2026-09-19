@@ -9,6 +9,7 @@ import (
 	"pika/internal/config"
 	"pika/internal/ipc"
 	"pika/internal/launcher"
+	"pika/internal/sensors"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -146,7 +147,11 @@ func (a *App) Search(query, kind string, requestID uint64) launcher.Response {
 }
 func (a *App) Details(id string) (launcher.Details, error) { return a.service.Details(id) }
 func (a *App) Icon(id string) string                       { return a.service.Icon(id) }
+func (a *App) Sensors() sensors.Snapshot                   { return a.service.Sensors() }
 func (a *App) Execute(id string) error {
+	if id == "system:sensors" {
+		return nil
+	}
 	if !a.dispatching.CompareAndSwap(false, true) {
 		return nil
 	}

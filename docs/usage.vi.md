@@ -454,3 +454,20 @@ Pika có bóng đen mềm hai lớp quanh search, hai cột và Settings: một 
 Tài khoản cá nhân có desktop entry `~/.local/share/applications/htop.desktop` ghi đè mục Htop của hệ thống, với `Exec=/usr/bin/wezterm start -- /usr/bin/htop` và `Terminal=false`. Vì WezTerm tự tạo cửa sổ terminal, Linux không bọc thêm terminal mặc định. Tên và icon Htop vẫn giữ nguyên. Cấu hình áp dụng cho Pika lẫn menu ứng dụng; không đổi terminal của các ứng dụng khác.
 
 Sau khi chỉnh entry, chạy `pika reindex`. Để khôi phục, đổi tên file override thành `htop.desktop.disabled` rồi chạy `pika reindex`; Linux sẽ dùng lại entry gốc trong `/usr/share/applications`.
+
+### Sensors — nhiệt độ, quạt và điện áp
+
+Nhấn **Alt+Space**, gõ **`sensors`** (hoặc `nhiet do`, `cam bien`), rồi chọn **Sensors**. Cột phải hiện các thông số phần cứng, nhóm theo chip: nhiệt độ °C, tốc độ quạt RPM, điện áp V và các loại cảm biến khác nếu máy có. Cuộn trong bảng để xem hết. Giới hạn High/Critical chỉ xuất hiện khi cảm biến cung cấp giá trị phù hợp.
+
+Bảng tự cập nhật mỗi 2 giây khi đang xem. Nhấn **Enter** hoặc nút **↻** để làm mới; Enter giữ Pika mở. Những lần yêu cầu cách nhau dưới 1,5 giây dùng lại dữ liệu vừa đọc. Khi đóng Pika, mở Settings hoặc chọn kết quả khác, việc cập nhật dừng lại. Nếu đọc lỗi, bảng giữ dữ liệu lần trước với nhãn `Last known readings` và thời điểm cập nhật.
+
+Máy hiện tại đã đọc được `sensors -j` bằng tài khoản thường, nên **không cần sudo hoặc chạy dò phần cứng mỗi lần**. Pika chỉ đọc số liệu, không chạy `sensors-detect`, không thay đổi driver hay tốc độ quạt. Khi cần chẩn đoán, có thể kiểm tra riêng nguồn dữ liệu bằng lệnh:
+
+```sh
+cd /home/lilmint/workspace/me/pika
+go run ./scripts/check-sensors
+```
+
+Trên máy khác, nếu báo thiếu `lm-sensors`, cài gói bằng `sudo apt install lm-sensors` rồi kiểm tra `sensors -j` với tài khoản thường. Nếu không có cảm biến, cần kiểm tra hỗ trợ phần cứng/driver; Pika sẽ hiện thông báo thay vì số giả.
+
+Tên và giá trị lấy nguyên từ phần cứng. Kênh chưa kết nối hoặc chưa hiệu chuẩn có thể báo giá trị bất thường; ví dụ máy hiện tại có một kênh nhiệt độ bo mạch âm. `0 RPM` có thể là quạt đang dừng hoặc cổng quạt không kết nối. Giá trị lỗi được ghi `Not available`. Preview trình duyệt có nhãn `Preview example` và chỉ dùng số minh họa; bản desktop đọc số thực.

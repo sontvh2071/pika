@@ -395,3 +395,68 @@ export namespace main {
 
 }
 
+export namespace sensors {
+	
+	export class Reading {
+	    chip: string;
+	    label: string;
+	    kind: string;
+	    unit: string;
+	    value?: number;
+	    high?: number;
+	    critical?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Reading(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chip = source["chip"];
+	        this.label = source["label"];
+	        this.kind = source["kind"];
+	        this.unit = source["unit"];
+	        this.value = source["value"];
+	        this.high = source["high"];
+	        this.critical = source["critical"];
+	    }
+	}
+	export class Snapshot {
+	    readings: Reading[];
+	    updated_at: number;
+	    stale: boolean;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Snapshot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.readings = this.convertValues(source["readings"], Reading);
+	        this.updated_at = source["updated_at"];
+	        this.stale = source["stale"];
+	        this.message = source["message"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+

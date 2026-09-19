@@ -4,7 +4,7 @@ import "os/exec"
 
 // Built-in session actions are available even when personal commands are off.
 func CollectSystemActions() []Candidate {
-	out := []Candidate{}
+	out := []Candidate{Prepare(Candidate{ID: "system:sensors", Kind: "system", Name: "Sensors", Target: "sensors", Path: "sensors -j", Subtitle: "Live temperatures, fans and voltages", Aliases: []string{"sensor", "temperature", "cpu temp", "nhiet do", "cam bien", "fan", "quat", "dien ap"}})}
 	for _, c := range []Candidate{
 		{ID: "system:lock", Kind: "system", Name: "Lock", Target: "lock", Subtitle: "Lock the screen", Aliases: []string{"lock screen", "khoa", "khoa man hinh"}, Icon: "system-lock-screen"},
 		{ID: "system:logout", Kind: "system", Name: "Log Out", Target: "logout", Subtitle: "Choose Log Out, Switch User or Cancel", Aliases: []string{"logout", "log out", "dang xuat", "switch user"}, Icon: "system-log-out"},

@@ -3,6 +3,7 @@
 import {codexusage} from '../models';
 import {launcher} from '../models';
 import {main} from '../models';
+import {sensors} from '../models';
 
 export function CenterWindow(arg1:number,arg2:number):Promise<void>;
 
@@ -35,5 +36,7 @@ export function ReloadConfig():Promise<void>;
 export function ReportFocus(arg1:boolean,arg2:boolean):Promise<void>;
 
 export function Search(arg1:string,arg2:string,arg3:number):Promise<launcher.Response>;
+
+export function Sensors():Promise<sensors.Snapshot>;
 
 export function SetTheme(arg1:string):Promise<void>;

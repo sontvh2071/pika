@@ -1,4 +1,5 @@
 import './launcher.css';
+import { createSensorsView, type SensorSnapshot } from './sensors';
 import { reveal, dismiss, conceal, selectIcon, revealDetails } from './motion';
 type Item = {
     id: string;
@@ -53,6 +54,7 @@ type QuotaWindow = {remaining_percent:number; resets_at:number|null};
 type CodexQuota = {five_hour:QuotaWindow|null; weekly:QuotaWindow|null; reset_credits:number|null; updated_at:number; stale:boolean; message:string};
 type API = {
     GetState(): Promise<AppState>;
+    Sensors(): Promise<SensorSnapshot>;
     Search(q: string, kind: string, id: number): Promise<Response>;
     Execute(id: string): Promise<void>;
     Icon(id: string): Promise<string>;
@@ -83,6 +85,7 @@ declare global {
     }
 }
 const icons: Record<string, string> = {
+    sensors: '<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0Z"/><path d="M12 8v9M17 5h3M17 9h3"/>',
     search: '<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/>',
     app: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
     file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 14h8M8 17h5"/>',
@@ -104,6 +107,7 @@ function svg(name: string, cls = ''): string { return `<svg class="${cls}" viewB
 const native = Boolean(window.go?.main?.App);
 document.documentElement.dataset.host = native ? 'native' : 'preview';
 const demo: Item[] = [
+    {path:"sensors -j",id:"system:sensors",kind:"system",name:"Sensors",subtitle:"Live temperatures, fans and voltages",pinned:false},
     {path:'/usr/share/applications/chatgpt.desktop',id:'app:chatgpt.desktop',kind:'app',name:'ChatGPT',subtitle:'AI assistant',pinned:false},
     {path:'/usr/bin/cinnamon-screensaver-command',id:'system:lock',kind:'system',name:'Lock',subtitle:'Lock the screen',pinned:false},
     {path:'/usr/bin/cinnamon-session-quit',id:'system:logout',kind:'system',name:'Log Out',subtitle:'Choose Log Out, Switch User or Cancel',pinned:false},
@@ -115,9 +119,10 @@ const demo: Item[] = [
     { path: '/home/lilmint/workspace/me/pika', id: 'preview:project', kind: 'directory', name: 'pika', subtitle: '~/workspace/me', pinned: false },
     { path: '/home/lilmint/Documents', id: 'preview:documents', kind: 'directory', name: 'Documents', subtitle: '~/Documents', pinned: false },
 ];
-const previewState: AppState = { config: { window: { width: 720, height: 520, remember_query: false }, appearance: { theme: 'custom', inner_inset: 8, radius: 20, font_size: 16, colors: {background:'#101010',surface:'#151515',text:'#f3f3f3',muted:'#b8b8b8',selection:'#343434',accent:'#ffffff',border:'#535353',error:'#d0d0d0'} }, search: {include_commands:false}, open: {workspace_root:'/home/lilmint/workspace',workspace_executable:'/usr/bin/code'}, index: { roots: ['/home/lilmint'] } }, status: { apps: 5, files: 2, commands: 0, system: 3, indexing: false, watches: 0, warnings: [], state_error: '', duration_ms: 0 }, config_path: '~/.config/pika/config.toml' };
+const previewState: AppState = { config: { window: { width: 720, height: 520, remember_query: false }, appearance: { theme: 'custom', inner_inset: 8, radius: 20, font_size: 16, colors: {background:'#101010',surface:'#151515',text:'#f3f3f3',muted:'#b8b8b8',selection:'#343434',accent:'#ffffff',border:'#535353',error:'#d0d0d0'} }, search: {include_commands:false}, open: {workspace_root:'/home/lilmint/workspace',workspace_executable:'/usr/bin/code'}, index: { roots: ['/home/lilmint'] } }, status: { apps: 5, files: 2, commands: 0, system: 4, indexing: false, watches: 0, warnings: [], state_error: '', duration_ms: 0 }, config_path: '~/.config/pika/config.toml' };
 const api: API = window.go?.main.App || {
     GetState: async () => previewState,
+    Sensors: async () => ({readings:[{chip:'coretemp-isa-0000',label:'Package id 0',kind:'temp',unit:'°C',value:48,high:85,critical:105},{chip:'coretemp-isa-0000',label:'Core 0',kind:'temp',unit:'°C',value:46},{chip:'it8728-isa-0a30',label:'fan1',kind:'fan',unit:'RPM',value:1650},{chip:'it8728-isa-0a30',label:'fan2',kind:'fan',unit:'RPM',value:0},{chip:'it8728-isa-0a30',label:'Vbat',kind:'in',unit:'V',value:3}],updated_at:0,stale:false,message:'Preview example · desktop reads live sensors'}),
     ReportFocus: async () => {},
     CenterWindow: async () => {},
     PresentationReady: async () => {},
@@ -148,6 +153,12 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <section class="detail-panel" aria-label="Selected result details">
      <div id="detail-content" hidden>
       <header class="detail-header"><div id="detail-icon" class="detail-icon"></div><div class="detail-heading"><h2 id="detail-name"></h2><span id="detail-kind" class="type-badge"></span><span id="detail-pin" class="type-badge" hidden>Pinned</span></div></header>
+      <section id="sensors-view" aria-label="Hardware sensors" hidden>
+       <div class="sensors-toolbar"><span>LIVE · EVERY 2s</span><button id="sensors-refresh" class="icon-button" aria-label="Refresh sensors" title="Refresh sensors · Enter">${svg('refresh')}</button></div>
+       <p id="sensors-status" class="sensors-status">Loading sensors…</p>
+       <div id="sensors-readings" tabindex="0" aria-label="Sensor readings"></div>
+       <p class="sensors-note">Hardware-reported values and labels. Unused or uncalibrated channels may report unexpected values; 0 RPM can mean a stopped or unconnected fan.</p>
+      </section>
       <dl class="detail-properties"><div><dt>Kind</dt><dd id="detail-type"></dd></div><div class="path-property"><dt>Path</dt><dd id="detail-path"></dd></div><div><dt>Version</dt><dd id="detail-version"></dd></div></dl><button id="detail-open" class="detail-action"></button>
       <div id="detail-description" class="detail-description"><span id="detail-label"></span><p id="detail-subtitle"></p>
        <section id="codex-usage" aria-label="Codex usage remaining" hidden>
@@ -171,7 +182,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <p class="settings-copy">Your launcher, your rules. Edit the config to change colors, search folders, pins and personal commands.</p>
     <code id="config-path" class="config-path"></code>
     <div class="button-row"><button id="edit-config" class="primary-button">Edit config ${svg('arrow')}</button><button id="reload-config" class="secondary-button">Reload config</button></div>
-    <div class="stats-grid"><div><strong id="app-count">0</strong><span>applications</span></div><div><strong id="file-count">0</strong><span>files & folders</span></div><div><strong id="command-count">0</strong><span>commands</span></div><div><strong id="system-count">0</strong><span>system actions</span></div></div>
+    <div class="stats-grid"><div><strong id="app-count">0</strong><span>applications</span></div><div><strong id="file-count">0</strong><span>files & folders</span></div><div><strong id="command-count">0</strong><span>commands</span></div><div><strong id="system-count">0</strong><span>system tools</span></div></div>
     <div class="index-detail"><span id="index-detail">Index ready</span><button id="reindex" class="text-button">${svg('refresh')} Reindex</button></div>
     <p id="roots-help" class="settings-copy"></p><div id="warnings" class="warnings"></div>
    </div>
@@ -180,6 +191,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
  </main>`;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = $<HTMLInputElement>('query');
+const sensorView = createSensorsView(() => api.Sensors());
 let state: AppState = previewState, results: Item[] = [], selected = 0, version = 0, composing = false, busy = false, panel = false, hidden = native;
 let pending = false, searchTimer: ReturnType<typeof setTimeout>, detailTimer: ReturnType<typeof setTimeout>, detailToken = 0, detailedID = '';
 const rowCache = new Map<string, HTMLElement>();
@@ -206,7 +218,8 @@ async function refreshState() { try {
 catch (e) {
     report(e);
 } }
-function setPanel(open: boolean) { panel = open; if (open) clearTimeout(quotaTimer); else if (!$('codex-usage').hidden && results[selected]) void fetchQuota(results[selected].id, detailToken, false); syncLayout(); $('settings-panel').hidden = !open; document.querySelector<HTMLElement>('.inner-frame')!.inert = open; if (open)
+function setPanel(open: boolean) { panel = open;
+if (open) sensorView.close(); else if (!hidden && results[selected]?.id === 'system:sensors') sensorView.show(); if (open) clearTimeout(quotaTimer); else if (!$('codex-usage').hidden && results[selected]) void fetchQuota(results[selected].id, detailToken, false); syncLayout(); $('settings-panel').hidden = !open; document.querySelector<HTMLElement>('.inner-frame')!.inert = open; if (open)
     $('settings-close').focus();
 else
     input.focus(); }
@@ -246,16 +259,18 @@ function renderDetails() {
     const item = results[selected];
     $('detail-content').hidden = !item;
     $('detail-empty').hidden = Boolean(item);
-    if (!item) { clearTimeout(quotaTimer); $('codex-usage').hidden = true; detailedID = ''; detailToken++; clearTimeout(detailTimer); return; }
+    if (!item) { sensorView.close(); clearTimeout(quotaTimer); $('codex-usage').hidden = true; detailedID = ''; detailToken++; clearTimeout(detailTimer); return; }
     const fingerprint = JSON.stringify([item.id, item.path, item.subtitle, item.pinned]);
     if (detailedID === fingerprint) return;
     detailedID = fingerprint;
+    sensorView.close();
     const token = ++detailToken;
     clearTimeout(detailTimer);
     clearTimeout(quotaTimer);
     $('codex-usage').hidden = true;
     $('detail-subtitle').hidden = false;
     $('detail-content').classList.remove('has-usage');
+    $('detail-content').classList.toggle('has-sensors', item.id === 'system:sensors');
     const labels: Record<string, string> = { app: 'Application', file: 'File', directory: 'Folder', command: 'Command', system: 'System action' };
     $('detail-name').textContent = item.name;
     $('detail-kind').textContent = labels[item.kind] || item.kind;
@@ -272,6 +287,11 @@ function renderDetails() {
     const badge = $('detail-icon');
     badge.innerHTML = svg(itemIcon(item));
     revealDetails($('detail-content'));
+    if (item.id === 'system:sensors') {
+        $('detail-kind').textContent = 'Hardware monitor';
+        if (!hidden && !panel) sensorView.show();
+        return;
+    }
     if (native && item.kind === 'app') {
         void loadIcon(item.id).then(url => {
             if (!url || token !== detailToken) return;
@@ -458,7 +478,9 @@ function queueSearch() {
     if (!composing) searchTimer = setTimeout(() => { void search(); }, 25);
 }
 async function execute() { if (busy || pending || composing || !results[selected])
-    return; busy = true; const id = results[selected].id; try {
+    return;
+    if (results[selected].id === 'system:sensors') { await sensorView.refresh(); return; }
+    busy = true; const id = results[selected].id; try {
     if (native) {
         const token = presentation;
         // Finish the visual exit first. Execute still unmaps the native window
@@ -556,6 +578,7 @@ input.addEventListener('blur', reportFocus);
 let presentation = 0, painted = false;
 const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 function stopHiddenWork() {
+    sensorView.close();
     hidden = true; shell.inert = true;
     clearTimeout(quotaTimer); cancelAnimationFrame(focusFrame);
     version++; detailToken++; clearTimeout(searchTimer); clearTimeout(detailTimer);

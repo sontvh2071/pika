@@ -157,3 +157,13 @@ Browser preview screenshot inspected; computed shadows matched both layers. Empt
 ## Htop terminal preference
 
 Created user-level htop.desktop from the system entry, preserving its localized names/icon and changing Exec to `/usr/bin/wezterm start -- /usr/bin/htop`, Terminal to false. desktop-file-validate passed. Requested Pika reindex. Launched the exact entry with GIO and confirmed WezTerm CLI reported a pane titled `htop`. No Pika code/build or global default-terminal changes were needed.
+
+## 2026-09-19 — Live hardware sensors
+
+Added a built-in Sensors result and a read-only `sensors -j` provider with a 1.5-second command timeout/cache, coalesced reads, stale-data retention and explicit missing-package/driver errors. No sudo, hardware probing or fan-control writes. The detail panel groups readings by chip, preserves units and zero/negative values, shows faults as unavailable, and refreshes every 2 seconds only while visible. Enter/refresh stays in Pika; hiding, opening Settings or selecting another candidate cancels polling. Generation tokens discard late responses and repeated manual requests share the pending read and next polling timer.
+
+Passed `go test -race ./internal/...`, `go vet -tags webkit2_41 ./...`, and production Wails/TypeScript builds. Provider tests cover malformed/empty input, units, zero/negative readings, nulls/faults, limits, power input/average deduplication, concurrent caching, retained stale values, command argv, missing executable and cancellation. Real unprivileged provider returned 26 channels (12 temperatures, 5 fan speeds, 9 voltages). Values were sampled from this machine, not hardcoded defaults.
+
+Browser preview inspected with clearly labeled sample data: sensor groups/units/limits, 0 RPM, Enter and refresh button, restoring Firefox Kind/Path/Version after switching, and hiding both panels after clearing. Native smoke passed with guarded startup, readiness 437.9 ms, 10 focus cycles, 100 rapid toggles, stale-hide cancellation, cold-toggle focus and clean shutdown; sampled hide latency 176.5 ms. Native checks validate lifecycle/focus; preview data and screenshots do not claim native hardware-pixel validation.
+
+Installed and restarted the final build. All seven focus/readiness flags passed on show, native unmapping passed on hide, index reported four built-in system tools and no warnings. Left Pika ready in the background with the existing Alt+Space/autostart setup.

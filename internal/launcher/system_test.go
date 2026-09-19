@@ -23,7 +23,7 @@ func TestSystemActionsWithoutPersonalCommands(t *testing.T) {
 	s.Start()
 	defer s.Close()
 	eventually(t, func() bool { return s.Status().Version > 0 && !s.Status().Indexing })
-	for query, id := range map[string]string{"lock": "lock", "logout": "logout", "log out": "logout", "shutdown": "shutdown", "shut down": "shutdown", "tat may": "shutdown"} {
+	for query, id := range map[string]string{"sensors": "sensors", "nhiet do": "sensors", "lock": "lock", "logout": "logout", "log out": "logout", "shutdown": "shutdown", "shut down": "shutdown", "tat may": "shutdown"} {
 		results := s.Search(query, "all", 1).Results
 		if len(results) == 0 || results[0].ID != "system:"+id {
 			t.Fatalf("%q: %+v", query, results)
@@ -33,7 +33,7 @@ func TestSystemActionsWithoutPersonalCommands(t *testing.T) {
 			t.Fatalf("details: %+v %v", d, err)
 		}
 	}
-	if s.Status().Commands != 0 || s.Status().System != 3 {
+	if s.Status().Commands != 0 || s.Status().System != 4 {
 		t.Fatal(s.Status())
 	}
 }
