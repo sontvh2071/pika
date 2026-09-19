@@ -194,7 +194,7 @@ func (a *App) Reindex()                   { a.service.Reindex() }
 // Reserve the full layout even when results are hidden, keeping search anchored.
 func (a *App) resizeLocked() {
 	c := a.service.Config()
-	runtime.WindowSetSize(a.ctx, c.Window.Width, c.Window.Height)
+	runtime.WindowSetSize(a.ctx, c.Window.Width+2*shadowMargin, c.Window.Height+2*shadowMargin)
 }
 
 // GTK resizing is asynchronous. The frontend calls this after a resize event
@@ -203,7 +203,7 @@ func (a *App) CenterWindow(width, height int) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	cfg := a.service.Config()
-	if width != cfg.Window.Width || height != cfg.Window.Height {
+	if width != cfg.Window.Width+2*shadowMargin || height != cfg.Window.Height+2*shadowMargin {
 		return
 	}
 	runtime.WindowCenter(a.ctx)

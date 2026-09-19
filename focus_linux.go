@@ -12,6 +12,7 @@ package main
 static gint pika_focus_generation;
 static gint pika_focus_snapshot_done;
 static gint pika_focus_snapshot_flags;
+static gint pika_shadow_margin;
 
 static GtkWidget *pika_webview(GtkWidget *widget) {
     GType type = g_type_from_name("WebKitWebView");
@@ -39,6 +40,18 @@ static GtkWindow *pika_window(void) {
     return found;
 }
 
+// Shadows are visual only: clicks in the new transparent gutter pass through.
+static void pika_content_input_region(GtkWidget *widget, GtkAllocation *allocation, gpointer unused) {
+    GdkWindow *native = gtk_widget_get_window(widget);
+    if (!native) return;
+    cairo_rectangle_int_t content = {pika_shadow_margin, pika_shadow_margin,
+        MAX(0, allocation->width - 2 * pika_shadow_margin),
+        MAX(0, allocation->height - 2 * pika_shadow_margin)};
+    cairo_region_t *region = cairo_region_create_rectangle(&content);
+    gdk_window_input_shape_combine_region(native, region, 0, 0);
+    cairo_region_destroy(region);
+}
+
 // Wails 2.15 queues StartHidden's hide but synchronously calls show_all.
 // Guard that first map before WebKit has painted, including --background.
 static gboolean pika_first_realize(GSignalInvocationHint *hint, guint count, const GValue *values, gpointer unused) {
@@ -53,9 +66,14 @@ static gboolean pika_first_realize(GSignalInvocationHint *hint, guint count, con
     gtk_css_provider_load_from_data(css, "window { background-color: transparent; background-image: none; }", -1, NULL);
     gtk_style_context_add_provider(gtk_widget_get_style_context(widget), GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     g_object_unref(css);
+    g_signal_connect(widget, "size-allocate", G_CALLBACK(pika_content_input_region), NULL);
+    GtkAllocation allocation;
+    gtk_widget_get_allocation(widget, &allocation);
+    pika_content_input_region(widget, &allocation, NULL);
     return FALSE; // Only the first realization of our own launcher.
 }
-static void pika_install_presentation(void) {
+static void pika_install_presentation(gint margin) {
+    pika_shadow_margin = margin;
     gpointer klass = g_type_class_ref(GTK_TYPE_WIDGET);
     g_signal_add_emission_hook(g_signal_lookup("realize", GTK_TYPE_WIDGET), 0, pika_first_realize, NULL, NULL);
     g_type_class_unref(klass);
@@ -127,7 +145,7 @@ var focusSnapshotMu sync.Mutex
 
 func focusLauncher()               { C.pika_request_focus() }
 func cancelLauncherFocus()         { C.pika_cancel_focus() }
-func installLauncherPresentation() { C.pika_install_presentation() }
+func installLauncherPresentation() { C.pika_install_presentation(C.gint(shadowMargin)) }
 func presentLauncher()             { C.pika_present() }
 func nativeFocusState() (mapped, active, webview, surfaceReady bool) {
 	focusSnapshotMu.Lock()

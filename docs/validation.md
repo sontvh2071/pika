@@ -141,3 +141,14 @@ Per user request, halved the slide/scale entrance from 240 to 120 ms and exit fr
 ## 2026-09-19 — Minimal search bar
 
 Removed the filter button group, frontend filter state, Ctrl+1–4 handlers and unused tab styles. Search always requests all enabled candidate types; the optional clear button remains. Updated usage documentation. Production TypeScript/Wails build passed. Browser preview confirmed zero filter controls, mixed app/folder results for a shared query, clear returning to a search-only view, stable 720×40 search bounds and no console errors. Installed and restarted; all seven native focus/readiness flags were true on show and the window unmapped on hide. Existing 120/80 ms transitions are unchanged.
+
+
+## 2026-09-19 — Soft panel shadows without clipping
+
+Reviewed Apple’s official Spotlight screenshot: https://support.apple.com/en-sg/guide/mac-help/mchlp1008/mac . Added two neutral black box-shadow layers (0 2px 8px -2px at 38%, 0 12px 28px -8px at 62%) to search/results/details and Settings. No extra outer surface or backdrop blur. Shadows follow the existing 120/80 ms whole-launcher transform/opacity animation.
+
+Reserved a symmetric 48px transparent native gutter outside config content dimensions. Startup, minimum size, reload sizing and CenterWindow acknowledgements use the padded bounds. CSS container breakpoints follow content width so the gutter does not alter panel padding. GTK input shape excludes the gutter and updates on size allocation.
+
+Passed TypeScript/Wails production builds and go vet. Native smoke passed: frontend ready 440.9 ms, guarded startup, 10 focus cycles, 100 rapid toggles, stale-hide cancellation, cold-toggle focus, reload/reindex and clean shutdown. Installed build read-only X11 inspection measured native size 816×616 and input region (48,48,720,520), verifying the shadow gutter is excluded from pointer input. All seven focus/readiness flags passed, then app was left hidden in the background.
+
+Browser preview screenshot inspected; computed shadows matched both layers. Empty/matching/cleared states retained the 720×520 content frame with search at (280,100,720,40) in a 1280×720 viewport. Gap stayed 8px; content-responsive results/detail padding stayed 6px/12px. No console errors. Native pixel recordings or FPS benchmarking were not performed.

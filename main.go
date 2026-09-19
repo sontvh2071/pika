@@ -13,13 +13,17 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// Transparent space for panel shadows; config dimensions remain content size.
+// Keep --shadow-margin in frontend/src/launcher.css in sync.
+const shadowMargin = 48
+
 func runWindow(app *App, cfg config.Config) error {
 	// Install before Wails constructs/maps its GTK window, not in OnStartup
 	// (which runs asynchronously and can miss the first native frame).
 	installLauncherPresentation()
 	return wails.Run(&options.App{
-		Title: "Pika", Width: cfg.Window.Width, Height: cfg.Window.Height,
-		MinWidth: 480, MinHeight: 380, Frameless: true, DisableResize: true,
+		Title: "Pika", Width: cfg.Window.Width + 2*shadowMargin, Height: cfg.Window.Height + 2*shadowMargin,
+		MinWidth: 480 + 2*shadowMargin, MinHeight: 380 + 2*shadowMargin, Frameless: true, DisableResize: true,
 		StartHidden: true, AlwaysOnTop: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,

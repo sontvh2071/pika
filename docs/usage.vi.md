@@ -442,3 +442,8 @@ sleep 1
 ```
 
 Chờ tiến trình cũ thoát trước khi chạy lại (lệnh `quit` cần khoảng 100 ms). `pika focus-state` có thêm `surface_ready`: giá trị `false` khi đang chặn bề mặt lúc khởi động; sau lần hiện đầu tiên sẽ là `true` vì WebKit đã sẵn sàng.
+
+
+### Bóng đổ tối giản
+
+Pika có bóng đen mềm hai lớp quanh search, hai cột và Settings: một lớp sát mép, một lớp tỏa xuống dưới. Lề ngoài 48px hoàn toàn trong suốt để bóng không bị cắt; click trong lề này đi xuyên xuống ứng dụng bên dưới. Đây không phải padding của nội dung: cấu hình `width`/`height` vẫn là kích thước phần launcher, gap giữa các khung vẫn 8px. Với profile 720×520, cửa sổ native là 816×616 và phần nội dung giữ nguyên vị trí ở giữa. Hiệu ứng hiện/ẩn vẫn 120/80 ms. Không cần đổi config.

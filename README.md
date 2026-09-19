@@ -58,3 +58,5 @@ Built-in `lock`, `logout`, and `shutdown` search results use Cinnamon's screen l
 
 
 ChatGPT/Codex app details include live remaining 5-hour and weekly quotas, reset times and available reset credits from the official Codex app-server API. Refreshes every 30 seconds while selected; no reset is consumed and no agent turn is created. See the Vietnamese guide for troubleshooting.
+
+Panel shadows use two soft neutral-black layers. The native window reserves a transparent 48px gutter on each side, outside the configured content width/height; its input region excludes the gutter. Content remains centered and the 8px panel gap is unchanged.
