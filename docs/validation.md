@@ -136,3 +136,8 @@ Passed production TypeScript/Wails build and all three motion regression tests, 
 ### Timing adjustment — 120/80 ms
 
 Per user request, halved the slide/scale entrance from 240 to 120 ms and exit from 160 to 80 ms. Geometry and easing are unchanged. Updated duration assertions and user documentation. All three motion tests and production build passed; installed and restarted the app, verified all focus/readiness flags on show and native unmapping on hide. Pika remains ready in the background for Alt+Space.
+
+
+## 2026-09-19 — Minimal search bar
+
+Removed the filter button group, frontend filter state, Ctrl+1–4 handlers and unused tab styles. Search always requests all enabled candidate types; the optional clear button remains. Updated usage documentation. Production TypeScript/Wails build passed. Browser preview confirmed zero filter controls, mixed app/folder results for a shared query, clear returning to a search-only view, stable 720×40 search bounds and no console errors. Installed and restarted; all seven native focus/readiness flags were true on show and the window unmapped on hide. Existing 120/80 ms transitions are unchanged.

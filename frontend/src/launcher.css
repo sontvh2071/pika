@@ -45,15 +45,6 @@ button svg { pointer-events:none; }
 .icon-button:hover { background:var(--surface); color:var(--accent); }
 .clear-button { width:20px; height:24px; }
 .clear-button svg { width:13px; height:13px; }
-.tabs { display:flex; gap:7px; flex:none; align-items:center; }
-.tab { position:relative; width:23px; height:23px; padding:4px; display:flex; align-items:center; justify-content:center; border:1px solid transparent; border-radius:6px; background:#375875; color:#b9ddff; opacity:.68; }
-.tab[data-kind=app] { background:#1768a3; color:#d0eaff; }
-.tab[data-kind=file] { background:#a75c39; color:#ffe6d1; }
-.tab[data-kind=command] { background:#744778; color:#f5cffb; }
-.tab svg { width:14px; height:14px; }
-.tab sup { position:absolute; right:-4px; top:-6px; font-size:8px; line-height:12px; width:12px; border-radius:5px; color:#e6e7ef; background:#222537; }
-.tab:hover,.tab.active { opacity:1; }
-.tab.active { outline:1px solid var(--accent); outline-offset:2px; }
 .workspace { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--inset); }
 .results-area,.detail-panel { border:1px solid color-mix(in srgb,var(--border) 85%,transparent); border-radius:min(12px,var(--radius)); background:var(--surface); box-shadow:0 3px 9px #0003; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--border) transparent; min-width:0; }
 .results-area { padding:4px 13px; }
@@ -331,9 +322,6 @@ h1 {
 .result-icon { background:transparent; border-color:transparent; }
 .result-icon.command,.result-icon.directory,.result-icon.file { color:var(--accent); }
 .result-subtitle { color:var(--muted); opacity:1; }
-.tab,.tab[data-kind=app],.tab[data-kind=file],.tab[data-kind=command] { background:var(--surface); color:var(--muted); }
-.tab.active { background:var(--selection); color:var(--text); outline-color:color-mix(in srgb,var(--accent) 55%,transparent); }
-.tab sup { background:var(--surface); color:var(--muted); }
 .detail-icon { background:var(--surface); box-shadow:none; }
 .detail-heading h2 { font-size:15px; font-weight:500; }
 .detail-properties { font-size:12px; margin-top:24px; gap:14px; }

@@ -8,7 +8,7 @@ Giao diện đã bỏ nền và viền bao ngoài, thanh theme, chân trang và 
 
 Cửa sổ giữ cố định kích thước `window.width × window.height` (profile hiện tại: 720 × 520), căn giữa theo toàn bộ bố cục. Thanh search cao 40px luôn nằm ở đầu khung đó, giữ nguyên vị trí cả khi chưa gõ, có kết quả hoặc không có kết quả. Chỉ khi truy vấn có nội dung và có kết quả mới hiện hai cột bên dưới; xóa query, nhập toàn khoảng trắng hoặc không có kết quả sẽ ẩn hai cột, không đổi kích thước hay căn giữa lại. Phần trống bên dưới trong suốt. Settings vẫn mở bằng `Ctrl+,`. Palette đen–trắng dùng nền đặc `#151515`, highlight xám `#343434`, chữ `#f3f3f3`, điểm nhấn `#ffffff`; hover và focus cũng dùng thang xám. Font Ubuntu như desktop. Đây là palette cố định, không tự đổi theo wallpaper.
 
-- Search ứng dụng Linux và file/thư mục trong `/home/lilmint`. Profile này tắt commands bằng `search.include_commands = false`; tab Commands và Ctrl+4 không hoạt động trong profile này.
+- Search ứng dụng Linux và file/thư mục trong `/home/lilmint`. Profile này tắt commands bằng `search.include_commands = false`.
 - `/home/lilmint/workspace` và mọi đường dẫn con mở bằng `/usr/bin/code --reuse-window -- <path>`, gồm cả file và folder. Việc khớp dựa trên thành phần đường dẫn: `workspace-backup` không thuộc `workspace`.
 - File ngoài workspace mở bằng `xdg-open`, dùng ứng dụng mặc định theo loại file. Folder ngoài workspace mở bằng file manager mặc định; trên máy này là Nemo (`nemo.desktop`). Không sửa file association của hệ điều hành.
 - Cột phải hiển thị **Kind, Path, Version** và nút mở tương ứng. Path của app là file `.desktop` đã được index; file/folder dùng đường dẫn đầy đủ. Version app được đọc bất đồng bộ từ Debian package, Flatpak hoặc metadata AppImage khi có; không chạy lệnh Exec của app để đoán version. `Not available` = không lấy được version; file/folder hiện `Not applicable`.
@@ -171,14 +171,10 @@ Nếu dùng repo mà chưa cài, Command tạm thời là:
 | Click kết quả | Chọn và xem chi tiết ở cột phải |
 | Nhấp đúp kết quả / bấm Action ở cột phải | Mở kết quả đang chọn |
 | `Escape` | Đóng Settings nếu đang mở; nếu không thì ẩn Pika |
-| `Ctrl+1` | All |
-| `Ctrl+2` | Apps |
-| `Ctrl+3` | Files, gồm cả folders |
-| `Ctrl+4` | Commands, nếu `search.include_commands = true` |
 | `Ctrl+,` | Mở/đóng Settings |
 | `Ctrl+Shift+,` | Đọc lại config từ đĩa |
 | `Ctrl+R` | Yêu cầu reindex nền |
-| `> tên-lệnh` | Chỉ tìm commands, dù tab hiện tại là All |
+| `> tên-lệnh` | Chỉ tìm commands khi đã bật trong config |
 
 Không cần có dấu tiếng Việt khi tìm: `dieu khien` có thể tìm `Điều khiển`. Fuzzy hỗ trợ kiểu viết tắt theo thứ tự ký tự, như `frfx` cho Firefox; không phải bộ sửa mọi lỗi chính tả.
 
@@ -221,7 +217,7 @@ Giao diện không có thanh chọn theme hay nền chuyển sắc. Mặc địn
 
 Kích thước mặc định mới là **800×660** để hai cột thoáng như ảnh Look. Config cũ không bị tự ghi đè: nếu đang dùng 720×520, sửa `[window]` theo mẫu trên rồi Reload config. Bố cục vẫn hỗ trợ cửa sổ nhỏ tới 480×380.
 
-Dùng `Ctrl+R` hoặc **Reindex** trong Settings để làm mới dữ liệu. Nút lọc bên phải ô tìm kiếm lần lượt là All, Apps, Files, Commands (Ctrl+1…4). Muốn đổi từng màu, đặt `theme = "custom"` rồi sửa:
+Dùng `Ctrl+R` hoặc **Reindex** trong Settings để làm mới dữ liệu. Thanh search tìm chung các loại kết quả, không có nút filter hoặc phím tắt đổi filter. Muốn đổi từng màu, đặt `theme = "custom"` rồi sửa:
 
 ```toml
 [appearance.colors]
@@ -402,7 +398,7 @@ Nhấn Alt+Space, gõ một trong các từ sau, chọn kết quả và Enter:
 | `logout` hoặc `log out` | Mở hộp thoại Cinnamon: Log Out, Switch User, Cancel |
 | `shutdown` hoặc `shut down` | Mở hộp thoại Cinnamon: Suspend, Restart, Shut Down, Cancel |
 
-Các mục này thuộc **System action**, tìm được trong All hoặc Apps ngay cả khi `include_commands = false`. `logout` và `shutdown` gọi hộp thoại hệ thống, không dùng lệnh tắt máy trực tiếp hoặc tùy chọn bỏ qua xác nhận. Lựa chọn cụ thể phụ thuộc khả năng và cấu hình Cinnamon; ví dụ Suspend có thể bị vô hiệu hóa khi hệ thống không hỗ trợ.
+Các mục này thuộc **System action**, tìm trực tiếp trong thanh search ngay cả khi `include_commands = false`. `logout` và `shutdown` gọi hộp thoại hệ thống, không dùng lệnh tắt máy trực tiếp hoặc tùy chọn bỏ qua xác nhận. Lựa chọn cụ thể phụ thuộc khả năng và cấu hình Cinnamon; ví dụ Suspend có thể bị vô hiệu hóa khi hệ thống không hỗ trợ.
 
 Profile hiện tại dùng khoảng cách 8px, cỡ chữ cơ sở 16px, chữ tiêu đề đậm hơn và viền xám rõ. Các khung dùng nền đặc; phần ngoài khung vẫn trong suốt. Hiệu ứng co giãn cả vùng chữ đã được bỏ để giảm nhòe khi launcher hiện lên.
 

@@ -32,7 +32,7 @@ Set a Cinnamon custom shortcut to `/home/lilmint/.local/bin/pika toggle`, then b
 
 ## Keyboard
 
-Up/Down select · Enter opens · Escape hides · Ctrl+1/2/3/4 filters · Ctrl+, opens settings · Ctrl+Shift+, reloads config · Ctrl+R reindexes.
+Up/Down select · Enter opens · Escape hides · Ctrl+, opens settings · Ctrl+Shift+, reloads config · Ctrl+R reindexes.
 
 ## Development
 

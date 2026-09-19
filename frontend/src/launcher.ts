@@ -138,9 +138,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="search-symbol">${svg('search')}</div>
     <input id="query" role="combobox" aria-label="Search apps, files and commands" aria-autocomplete="list" aria-controls="results" aria-expanded="false" placeholder="Search apps, files, commands…" autocomplete="off" spellcheck="false" autofocus />
     <button id="clear" class="icon-button clear-button" aria-label="Clear search" title="Clear search" hidden>${svg('close')}</button>
-    <div class="tabs" role="tablist" aria-label="Filter results">
-     ${[['all','search','All'],['app','app','Apps'],['file','file','Files'],['command','command','Commands']].map(([id, icon, label], i) => `<button class="tab ${i === 0 ? 'active' : ''}" role="tab" data-kind="${id}" aria-label="${label}" title="${label} · Ctrl+${i + 1}" aria-selected="${i === 0}">${svg(icon)}<sup>${i + 1}</sup></button>`).join('')}
-    </div>
    </header>
    <div class="workspace" hidden>
     <section class="results-area" aria-label="Search results">
@@ -183,7 +180,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
  </main>`;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = $<HTMLInputElement>('query');
-let state: AppState = previewState, kind = 'all', results: Item[] = [], selected = 0, version = 0, composing = false, busy = false, panel = false, hidden = native;
+let state: AppState = previewState, results: Item[] = [], selected = 0, version = 0, composing = false, busy = false, panel = false, hidden = native;
 let pending = false, searchTimer: ReturnType<typeof setTimeout>, detailTimer: ReturnType<typeof setTimeout>, detailToken = 0, detailedID = '';
 const rowCache = new Map<string, HTMLElement>();
 const highlight = document.getElementById('selection-highlight')!;
@@ -203,9 +200,6 @@ async function refreshState() { try {
     state = await api.GetState();
     applyTheme();
     renderStatus();
-    const commandTab = document.querySelector<HTMLButtonElement>('[data-kind="command"]')!;
-    commandTab.hidden = !state.config.search.include_commands;
-    if (kind === 'command' && !state.config.search.include_commands) kind = 'all';
     input.placeholder = state.config.search.include_commands ? 'Search apps, files, commands…' : 'Search apps, files and folders…';
     input.setAttribute('aria-label', input.placeholder.replace('…', ''));
 }
@@ -230,11 +224,6 @@ function centerWholeWindow() {
     centerFrame = requestAnimationFrame(() => { void api.CenterWindow(innerWidth, innerHeight).catch(report); });
 }
 window.addEventListener('resize', centerWholeWindow);
-function setKind(next: string) { if (next === 'command' && !state.config.search.include_commands) return; kind = next; for (const el of document.querySelectorAll<HTMLButtonElement>('[data-kind]')) {
-    const active = el.dataset.kind === kind;
-    el.classList.toggle('active', active);
-    el.setAttribute('aria-selected', String(active));
-} ; input.focus(); void search(); }
 function selection(animate = true) {
     const rows = document.querySelectorAll<HTMLElement>('.result');
     const previous = document.querySelector<HTMLElement>('.result.selected');
@@ -355,7 +344,7 @@ function render() {
     syncLayout();
     const box = $('results');
     for (const [id, row] of rowCache) { if (!results.some(item => item.id === id)) { row.remove(); rowCache.delete(id); } }
-    $('section-label').textContent = input.value.trim() ? 'RESULTS' : kind === 'all' ? 'SUGGESTED' : kind === 'app' ? 'APPLICATIONS' : kind === 'file' ? 'FILES & FOLDERS' : 'YOUR COMMANDS';
+    $('section-label').textContent = input.value.trim() ? 'RESULTS' : 'SUGGESTED';
     $('result-count').textContent = results.length ? `${results.length} results` : '';
     for (const [i, item] of results.entries()) {
         const cached = rowCache.get(item.id);
@@ -419,12 +408,12 @@ function render() {
     }
     $('empty').hidden = results.length > 0;
     if (!results.length) {
-        const message = state.status.indexing ? 'Building your index…' : kind === 'file' && !state.config.index.roots.length ? 'A place for your files' : kind === 'command' ? 'Your shortcuts start here' : 'No matches found';
-        const detail = state.status.indexing ? 'Applications will appear first. You can keep typing.' : kind === 'file' && !state.config.index.roots.length ? 'Add folders to your config to make them searchable.' : kind === 'command' ? 'Add a [[commands]] entry to your config, then reload.' : 'Try a shorter name or another category.';
+        const message = state.status.indexing ? 'Building your index…' : 'No matches found';
+        const detail = state.status.indexing ? 'Applications will appear first. You can keep typing.' : 'Try a shorter name.';
         $('empty').replaceChildren();
         const symbol = document.createElement('div');
         symbol.className = 'empty-icon';
-        symbol.innerHTML = svg(kind === 'file' ? 'directory' : kind === 'command' ? 'command' : 'search');
+        symbol.innerHTML = svg('search');
         const h = document.createElement('strong');
         h.textContent = message;
         const p = document.createElement('p');
@@ -443,7 +432,7 @@ async function search(preserveSelection = false) {
     $('clear').hidden = !input.value;
     try {
         if (!input.value.trim()) { results = []; selected = 0; render(); return; }
-        const r = await api.Search(input.value, kind, id);
+        const r = await api.Search(input.value, 'all', id);
         if (id !== version || hidden) return;
         results = r.results;
         selected = Math.max(0, results.findIndex(x => x.id === previous));
@@ -490,8 +479,6 @@ input.addEventListener('input', queueSearch);
 input.addEventListener('compositionstart', () => { composing = true; queueSearch(); });
 input.addEventListener('compositionend', () => { composing = false; void search(); });
 $('clear').onclick = () => { input.value = ''; input.focus(); void search(); };
-for (const tab of document.querySelectorAll<HTMLButtonElement>('[data-kind]'))
-    tab.onclick = () => setKind(tab.dataset.kind!);
 $('detail-open').onclick = () => { void execute(); };
 $('settings-close').onclick = () => setPanel(false);
 $('edit-config').onclick = () => { void api.OpenConfig().catch(report); };
@@ -532,13 +519,6 @@ document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.key.toLowerCase() === 'r') {
         e.preventDefault();
         void api.Reindex().catch(report);
-        return;
-    }
-    if (e.ctrlKey && ['1', '2', '3', '4'].includes(e.key)) {
-        e.preventDefault();
-        if (panel)
-            setPanel(false);
-        setKind(['all', 'app', 'file', 'command'][Number(e.key) - 1]);
         return;
     }
     if (panel)
@@ -584,10 +564,10 @@ window.runtime?.EventsOn('pika:shown', token => {
     if (token <= presentation) return;
     presentation = token;
     hidden = false; shell.inert = false; version++; detailedID = '';
-    if (!state.config.window.remember_query) { input.value = ''; kind = 'all'; results = []; }
+    if (!state.config.window.remember_query) { input.value = ''; results = []; }
     setPanel(false); focusSearchAfterActivation();
     // Use the already-loaded config immediately; opening should not wait on IO.
-    setKind(kind);
+    void search();
     void (async () => {
         if (!painted) { await nextFrame(); await nextFrame(); }
         if (presentation !== token || hidden) return;
