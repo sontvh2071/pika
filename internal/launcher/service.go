@@ -18,6 +18,7 @@ import (
 	"pika/internal/codexusage"
 	"pika/internal/config"
 	"pika/internal/desktop"
+	"pika/internal/processmonitor"
 	"pika/internal/sensors"
 	"pika/internal/storage"
 )
@@ -47,31 +48,32 @@ type Response struct {
 	DurationMS float64          `json:"duration_ms"`
 }
 type Service struct {
-	themeMu        sync.Mutex
-	mu             sync.RWMutex
-	cfg            config.Config
-	configPath     string
-	status         Status
-	snapshot       atomic.Pointer[Snapshot]
-	usage          atomic.Pointer[map[string]catalog.Usage]
-	usageMu        sync.Mutex
-	usageVersion   atomic.Uint64
-	store          *storage.Store
-	refresh        chan struct{}
-	ctx            context.Context
-	cancel         context.CancelFunc
-	wg             sync.WaitGroup
-	Notify         func(string)
-	icons          sync.Map
-	details        sync.Map
-	metadataSlots  chan struct{}
-	codexQuota     *codexusage.Client
-	sensorReadings *sensors.Client
+	themeMu         sync.Mutex
+	mu              sync.RWMutex
+	cfg             config.Config
+	configPath      string
+	status          Status
+	snapshot        atomic.Pointer[Snapshot]
+	usage           atomic.Pointer[map[string]catalog.Usage]
+	usageMu         sync.Mutex
+	usageVersion    atomic.Uint64
+	store           *storage.Store
+	refresh         chan struct{}
+	ctx             context.Context
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
+	Notify          func(string)
+	icons           sync.Map
+	details         sync.Map
+	metadataSlots   chan struct{}
+	codexQuota      *codexusage.Client
+	sensorReadings  *sensors.Client
+	processReadings *processmonitor.Client
 }
 
 func New(cfg config.Config, path, dataPath string) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &Service{cfg: cfg, configPath: path, refresh: make(chan struct{}, 1), ctx: ctx, cancel: cancel, metadataSlots: make(chan struct{}, 2), codexQuota: codexusage.New(), sensorReadings: sensors.New()}
+	s := &Service{cfg: cfg, configPath: path, refresh: make(chan struct{}, 1), ctx: ctx, cancel: cancel, metadataSlots: make(chan struct{}, 2), codexQuota: codexusage.New(), sensorReadings: sensors.New(), processReadings: processmonitor.New()}
 	s.snapshot.Store(&Snapshot{Items: []catalog.Candidate{}, ByID: map[string]catalog.Candidate{}})
 	usage := map[string]catalog.Usage{}
 	store, err := storage.Open(dataPath)

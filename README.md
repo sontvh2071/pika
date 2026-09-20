@@ -62,3 +62,5 @@ ChatGPT/Codex app details include live remaining 5-hour and weekly quotas, reset
 Panel shadows use two soft neutral-black layers. The native window reserves a transparent 48px gutter on each side, outside the configured content width/height; its input region excludes the gutter. Content remains centered and the 8px panel gap is unchanged.
 
 Search `sensors` to view live temperatures, fan speeds and voltages in the detail panel. Reads `sensors -j` without sudo; refreshes every 2 seconds while visible, or with Enter/↻ (minimum 1.5 seconds between reads). Requires lm-sensors and working hardware drivers. Polling stops when hidden or another result is selected. Diagnostic: `go run ./scripts/check-sensors`.
+
+Selecting Htop shows a live CPU/RAM/swap overview and the top eight processes in the right panel. Enter opens the existing Htop desktop entry (WezTerm in the personal setup). Reads `/proc` directly without running Htop or sudo; polls only while visible. See the Vietnamese guide for sampling and memory semantics.

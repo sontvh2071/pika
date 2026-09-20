@@ -408,3 +408,25 @@ h1 {
 #sensors-readings small { grid-column:1/-1; font-size:10px; color:var(--muted); }
 .sensors-note { font-size:10px; line-height:1.5; color:var(--muted); margin:10px 0 0; flex:none; }
 #sensors-view.is-stale #sensors-readings { opacity:.55; }
+
+/* Compact Htop overview; Enter still launches its desktop entry. */
+.has-processes { height:100%; display:flex; flex-direction:column; min-height:0; }
+.has-processes>.detail-properties,.has-processes>.detail-description { display:none; }
+.has-processes>.detail-header,.has-processes>.detail-action { flex:none; }
+.has-processes>.detail-action { margin-top:10px; }
+#process-view { display:flex; flex-direction:column; flex:1; min-height:0; padding-top:10px; }
+#process-scroll { overflow:auto; min-height:0; flex:1; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+#process-summary>div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px; margin-bottom:10px; font-size:12px; }
+#process-summary strong { font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+#process-summary progress { display:block; appearance:none; width:100%; height:4px; border:0; border-radius:4px; overflow:hidden; background:var(--selection); color:var(--text); }
+#process-summary progress::-webkit-progress-bar { background:var(--selection); }
+#process-summary progress::-webkit-progress-value { background:var(--text); }
+#process-summary progress::-moz-progress-bar { background:var(--text); }
+#process-caption { font-size:10px; font-weight:500; color:var(--muted); margin:15px 0 8px; }
+.process-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; }
+.process-table th { color:var(--muted); font-size:10px; font-weight:500; }
+.process-table th,.process-table td { text-align:right; padding:6px 0 6px 5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent); }
+.process-table th:first-child,.process-table td:first-child { text-align:left; padding-left:0; width:36%; }
+.process-table th:nth-child(2) { width:16%; }
+.process-table th:nth-child(3) { width:20%; }
+#process-view.is-stale #process-scroll { opacity:.55; }

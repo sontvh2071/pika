@@ -471,3 +471,21 @@ go run ./scripts/check-sensors
 Trên máy khác, nếu báo thiếu `lm-sensors`, cài gói bằng `sudo apt install lm-sensors` rồi kiểm tra `sensors -j` với tài khoản thường. Nếu không có cảm biến, cần kiểm tra hỗ trợ phần cứng/driver; Pika sẽ hiện thông báo thay vì số giả.
 
 Tên và giá trị lấy nguyên từ phần cứng. Kênh chưa kết nối hoặc chưa hiệu chuẩn có thể báo giá trị bất thường; ví dụ máy hiện tại có một kênh nhiệt độ bo mạch âm. `0 RPM` có thể là quạt đang dừng hoặc cổng quạt không kết nối. Giá trị lỗi được ghi `Not available`. Preview trình duyệt có nhãn `Preview example` và chỉ dùng số minh họa; bản desktop đọc số thực.
+
+
+### Xem nhanh Htop ngay trong Pika
+
+Nhấn **Alt+Space → gõ `htop` → chọn Htop**. Cột phải tự hiện CPU tổng, RAM, swap và 8 tiến trình dùng CPU nhiều nhất (tên, PID, CPU %, RAM). Bảng cập nhật mỗi 2 giây; nút **↻** làm mới theo yêu cầu, tối thiểu 1,5 giây giữa hai lần đọc. Cuộn bảng để xem hết.
+
+**Enter** hoặc nút **Open Htop in WezTerm** mới mở ứng dụng Htop đầy đủ bằng WezTerm, theo desktop entry đã cấu hình. Chọn kết quả chỉ mở bảng xem nhanh. Không cần cài thêm gói hoặc dùng sudo: Pika đọc trực tiếp `/proc`, không chạy Htop ngầm. Khi ẩn Pika, mở Settings hoặc chọn mục khác, việc lấy mẫu dừng lại.
+
+CPU cần hai mẫu: lần đầu hoặc sau khi nghỉ lâu, hiện `Measuring CPU…` trong khoảng 2 giây. Trong lúc đó, RAM và tiến trình đã có; danh sách tạm xếp theo RAM đến khi có CPU. CPU tổng nằm trong khoảng 0–100%; CPU của một tiến trình tính 100% cho một CPU logic nên có thể vượt 100%. RAM tổng dùng `MemTotal − MemAvailable`; RAM tiến trình là RSS, có thể tính trùng bộ nhớ chia sẻ giữa các tiến trình, không nên cộng thành RAM tổng. Cách tính có thể khác cấu hình hiển thị trong Htop.
+
+Bảng chỉ xem, không có thao tác kill hay đổi priority. Tiến trình đã thoát hoặc không đọc được sẽ được bỏ qua và có số lượng `unavailable`; lỗi đọc toàn bộ giữ dữ liệu cũ với nhãn `Last known readings`. Chẩn đoán nguồn dữ liệu:
+
+```sh
+cd /home/lilmint/workspace/me/pika
+go run ./scripts/check-process-monitor
+```
+
+Preview trình duyệt có nhãn `Preview example` và dùng số minh họa. Bản desktop đọc dữ liệu thật từ máy.

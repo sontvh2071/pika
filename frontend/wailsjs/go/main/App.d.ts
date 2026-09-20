@@ -3,6 +3,7 @@
 import {codexusage} from '../models';
 import {launcher} from '../models';
 import {main} from '../models';
+import {processmonitor} from '../models';
 import {sensors} from '../models';
 
 export function CenterWindow(arg1:number,arg2:number):Promise<void>;
@@ -26,6 +27,8 @@ export function Icon(arg1:string):Promise<string>;
 export function OpenConfig():Promise<void>;
 
 export function PresentationReady(arg1:number):Promise<void>;
+
+export function ProcessMonitor():Promise<processmonitor.Snapshot>;
 
 export function Quit():Promise<void>;
 

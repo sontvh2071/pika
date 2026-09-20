@@ -46,6 +46,10 @@ export function PresentationReady(arg1) {
   return window['go']['main']['App']['PresentationReady'](arg1);
 }
 
+export function ProcessMonitor() {
+  return window['go']['main']['App']['ProcessMonitor']();
+}
+
 export function Quit() {
   return window['go']['main']['App']['Quit']();
 }

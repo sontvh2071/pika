@@ -1,4 +1,5 @@
 import './launcher.css';
+import { createProcessView, isHtop, type ProcessSnapshot } from './process-monitor';
 import { createSensorsView, type SensorSnapshot } from './sensors';
 import { reveal, dismiss, conceal, selectIcon, revealDetails } from './motion';
 type Item = {
@@ -55,6 +56,7 @@ type CodexQuota = {five_hour:QuotaWindow|null; weekly:QuotaWindow|null; reset_cr
 type API = {
     GetState(): Promise<AppState>;
     Sensors(): Promise<SensorSnapshot>;
+    ProcessMonitor(): Promise<ProcessSnapshot>;
     Search(q: string, kind: string, id: number): Promise<Response>;
     Execute(id: string): Promise<void>;
     Icon(id: string): Promise<string>;
@@ -107,6 +109,7 @@ function svg(name: string, cls = ''): string { return `<svg class="${cls}" viewB
 const native = Boolean(window.go?.main?.App);
 document.documentElement.dataset.host = native ? 'native' : 'preview';
 const demo: Item[] = [
+    {path:'/home/lilmint/.local/share/applications/htop.desktop',id:'app:htop.desktop',kind:'app',name:'Htop',subtitle:'Process Viewer',pinned:false},
     {path:"sensors -j",id:"system:sensors",kind:"system",name:"Sensors",subtitle:"Live temperatures, fans and voltages",pinned:false},
     {path:'/usr/share/applications/chatgpt.desktop',id:'app:chatgpt.desktop',kind:'app',name:'ChatGPT',subtitle:'AI assistant',pinned:false},
     {path:'/usr/bin/cinnamon-screensaver-command',id:'system:lock',kind:'system',name:'Lock',subtitle:'Lock the screen',pinned:false},
@@ -123,6 +126,7 @@ const previewState: AppState = { config: { window: { width: 720, height: 520, re
 const api: API = window.go?.main.App || {
     GetState: async () => previewState,
     Sensors: async () => ({readings:[{chip:'coretemp-isa-0000',label:'Package id 0',kind:'temp',unit:'°C',value:48,high:85,critical:105},{chip:'coretemp-isa-0000',label:'Core 0',kind:'temp',unit:'°C',value:46},{chip:'it8728-isa-0a30',label:'fan1',kind:'fan',unit:'RPM',value:1650},{chip:'it8728-isa-0a30',label:'fan2',kind:'fan',unit:'RPM',value:0},{chip:'it8728-isa-0a30',label:'Vbat',kind:'in',unit:'V',value:3}],updated_at:0,stale:false,message:'Preview example · desktop reads live sensors'}),
+    ProcessMonitor: async () => ({cpu:18.5,cpus:8,memory_used:6.8*1024**3,memory_total:15.5*1024**3,swap_used:0,swap_total:2*1024**3,process_count:248,skipped:0,processes:[{pid:2105,name:'firefox',cpu:42.1,memory:840*1024**2},{pid:3422,name:'WebKitWebProcess',cpu:12.4,memory:220*1024**2},{pid:1850,name:'cinnamon',cpu:3.1,memory:180*1024**2},...Array.from({length:5},(_,i)=>({pid:4000+i,name:['pika','wezterm-gui','Xorg','pipewire','systemd'][i],cpu:Math.max(0,2-i*.5),memory:(120-i*20)*1024**2}))],updated_at:Math.floor(Date.now()/1000),stale:false,message:'Preview example · sample data'}),
     ReportFocus: async () => {},
     CenterWindow: async () => {},
     PresentationReady: async () => {},
@@ -159,6 +163,16 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
        <div id="sensors-readings" tabindex="0" aria-label="Sensor readings"></div>
        <p class="sensors-note">Hardware-reported values and labels. Unused or uncalibrated channels may report unexpected values; 0 RPM can mean a stopped or unconnected fan.</p>
       </section>
+      <section id="process-view" aria-label="Process monitor" hidden>
+       <div class="sensors-toolbar"><span>LIVE · EVERY 2s</span><button id="process-refresh" class="icon-button" aria-label="Refresh processes" title="Refresh processes">${svg('refresh')}</button></div>
+       <p id="process-status" class="sensors-status"></p>
+       <div id="process-scroll" tabindex="0" aria-label="Process statistics">
+        <div id="process-summary"></div>
+        <h3 id="process-caption">TOP CPU</h3>
+        <table class="process-table" aria-label="Top processes by CPU"><thead><tr><th scope="col">Process</th><th scope="col">PID</th><th scope="col">CPU</th><th scope="col">RAM</th></tr></thead><tbody id="process-list"></tbody></table>
+        <p class="sensors-note">Process CPU: 100% = one logical CPU. RAM uses available memory; process RAM is RSS. Read-only preview.</p>
+       </div>
+      </section>
       <dl class="detail-properties"><div><dt>Kind</dt><dd id="detail-type"></dd></div><div class="path-property"><dt>Path</dt><dd id="detail-path"></dd></div><div><dt>Version</dt><dd id="detail-version"></dd></div></dl><button id="detail-open" class="detail-action"></button>
       <div id="detail-description" class="detail-description"><span id="detail-label"></span><p id="detail-subtitle"></p>
        <section id="codex-usage" aria-label="Codex usage remaining" hidden>
@@ -192,6 +206,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = $<HTMLInputElement>('query');
 const sensorView = createSensorsView(() => api.Sensors());
+const processView = createProcessView(() => api.ProcessMonitor());
 let state: AppState = previewState, results: Item[] = [], selected = 0, version = 0, composing = false, busy = false, panel = false, hidden = native;
 let pending = false, searchTimer: ReturnType<typeof setTimeout>, detailTimer: ReturnType<typeof setTimeout>, detailToken = 0, detailedID = '';
 const rowCache = new Map<string, HTMLElement>();
@@ -219,6 +234,7 @@ catch (e) {
     report(e);
 } }
 function setPanel(open: boolean) { panel = open;
+if (open) processView.close(); else if (!hidden && isHtop(results[selected])) processView.show();
 if (open) sensorView.close(); else if (!hidden && results[selected]?.id === 'system:sensors') sensorView.show(); if (open) clearTimeout(quotaTimer); else if (!$('codex-usage').hidden && results[selected]) void fetchQuota(results[selected].id, detailToken, false); syncLayout(); $('settings-panel').hidden = !open; document.querySelector<HTMLElement>('.inner-frame')!.inert = open; if (open)
     $('settings-close').focus();
 else
@@ -259,11 +275,12 @@ function renderDetails() {
     const item = results[selected];
     $('detail-content').hidden = !item;
     $('detail-empty').hidden = Boolean(item);
-    if (!item) { sensorView.close(); clearTimeout(quotaTimer); $('codex-usage').hidden = true; detailedID = ''; detailToken++; clearTimeout(detailTimer); return; }
+    if (!item) { processView.close(); sensorView.close(); clearTimeout(quotaTimer); $('codex-usage').hidden = true; detailedID = ''; detailToken++; clearTimeout(detailTimer); return; }
     const fingerprint = JSON.stringify([item.id, item.path, item.subtitle, item.pinned]);
     if (detailedID === fingerprint) return;
     detailedID = fingerprint;
     sensorView.close();
+    processView.close();
     const token = ++detailToken;
     clearTimeout(detailTimer);
     clearTimeout(quotaTimer);
@@ -271,6 +288,7 @@ function renderDetails() {
     $('detail-subtitle').hidden = false;
     $('detail-content').classList.remove('has-usage');
     $('detail-content').classList.toggle('has-sensors', item.id === 'system:sensors');
+    $('detail-content').classList.toggle('has-processes', isHtop(item));
     const labels: Record<string, string> = { app: 'Application', file: 'File', directory: 'Folder', command: 'Command', system: 'System action' };
     $('detail-name').textContent = item.name;
     $('detail-kind').textContent = labels[item.kind] || item.kind;
@@ -299,6 +317,12 @@ function renderDetails() {
             image.onerror = () => { if (token === detailToken) badge.innerHTML = svg(itemIcon(item)); };
             badge.replaceChildren(image);
         }).catch(() => {});
+    }
+    if (isHtop(item)) {
+        $('detail-kind').textContent = 'Process monitor';
+        $('detail-open').textContent = 'Open Htop in WezTerm ↵';
+        if (!hidden && !panel) processView.show();
+        return;
     }
     detailTimer = setTimeout(() => { void api.Details(item.id).then(detail => {
         if (token !== detailToken || hidden) return;
@@ -579,6 +603,7 @@ let presentation = 0, painted = false;
 const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 function stopHiddenWork() {
     sensorView.close();
+    processView.close();
     hidden = true; shell.inert = true;
     clearTimeout(quotaTimer); cancelAnimationFrame(focusFrame);
     version++; detailToken++; clearTimeout(searchTimer); clearTimeout(detailTimer);

@@ -395,6 +395,81 @@ export namespace main {
 
 }
 
+export namespace processmonitor {
+
+	export class Process {
+	    pid: number;
+	    name: string;
+	    cpu?: number;
+	    memory: number;
+
+	    static createFrom(source: any = {}) {
+	        return new Process(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pid = source["pid"];
+	        this.name = source["name"];
+	        this.cpu = source["cpu"];
+	        this.memory = source["memory"];
+	    }
+	}
+	export class Snapshot {
+	    cpu?: number;
+	    cpus: number;
+	    memory_used: number;
+	    memory_total: number;
+	    swap_used: number;
+	    swap_total: number;
+	    process_count: number;
+	    skipped: number;
+	    processes: Process[];
+	    updated_at: number;
+	    stale: boolean;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Snapshot(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cpu = source["cpu"];
+	        this.cpus = source["cpus"];
+	        this.memory_used = source["memory_used"];
+	        this.memory_total = source["memory_total"];
+	        this.swap_used = source["swap_used"];
+	        this.swap_total = source["swap_total"];
+	        this.process_count = source["process_count"];
+	        this.skipped = source["skipped"];
+	        this.processes = this.convertValues(source["processes"], Process);
+	        this.updated_at = source["updated_at"];
+	        this.stale = source["stale"];
+	        this.message = source["message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace sensors {
 	
 	export class Reading {
