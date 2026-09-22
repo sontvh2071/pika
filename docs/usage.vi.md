@@ -489,3 +489,10 @@ go run ./scripts/check-process-monitor
 ```
 
 Preview trình duyệt có nhãn `Preview example` và dùng số minh họa. Bản desktop đọc dữ liệu thật từ máy.
+
+
+### Căn giữa ngay lần mở đầu sau đăng nhập
+
+Bản sửa ngày 22/09/2026 căn lại cửa sổ sau khi trình quản lý cửa sổ xác nhận nó đã được đưa lên màn hình. Trong lần hiện đầu, Pika giữ lớp ẩn khởi động cho tới khi kiểm tra được vị trí ở giữa, thay vì chỉ gửi lệnh căn giữa trước lúc hiện. Khoảng chờ này có giới hạn dự phòng cho hệ thống không hỗ trợ đặt vị trí tuyệt đối. Các lần mở tiếp theo vẫn dùng hiệu ứng 120/80 ms; vị trí thanh search không đổi khi nhập truy vấn.
+
+Không cần đổi autostart hoặc phím tắt Alt+Space. Để kiểm tra bản build trên phiên đồ họa hiện tại, chạy `python3 scripts/native-smoke.py`: khi có X11 và các công cụ xwininfo/xprop/xrandr, bài kiểm tra xác nhận tọa độ cửa sổ thật ở lần mở đầu từ tiến trình chạy nền, các lần bật/tắt và lần khởi động qua shortcut khi chưa có Pika chạy.

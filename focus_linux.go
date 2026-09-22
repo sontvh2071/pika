@@ -13,6 +13,38 @@ static gint pika_focus_generation;
 static gint pika_focus_snapshot_done;
 static gint pika_focus_snapshot_flags;
 static gint pika_shadow_margin;
+static gint pika_present_generation;
+static gboolean pika_map_received;
+
+// A move sent before MapNotify can be replaced by the WM's initial placement.
+// Reapply using the allocated native size, then confirm the actual root position.
+static gboolean pika_center_mapped(GtkWindow *window) {
+    GtkWidget *widget = GTK_WIDGET(window);
+    GdkWindow *native = gtk_widget_get_window(widget);
+    if (!native || !pika_map_received || !gtk_widget_get_mapped(widget)) return FALSE;
+    GdkDisplay *display = gtk_widget_get_display(widget);
+    GdkMonitor *monitor = gdk_display_get_monitor_at_window(display, native);
+    if (!monitor) monitor = gdk_display_get_primary_monitor(display);
+    if (!monitor) return FALSE;
+    GdkRectangle bounds;
+    gdk_monitor_get_geometry(monitor, &bounds);
+    gint width, height, x, y;
+    gtk_window_get_size(window, &width, &height);
+    if (width <= 1 || height <= 1 || bounds.width <= 0 || bounds.height <= 0) return FALSE;
+    gint target_x = bounds.x + (bounds.width - width) / 2;
+    gint target_y = bounds.y + (bounds.height - height) / 2;
+    gdk_window_get_origin(native, &x, &y);
+    if (ABS(x - target_x) <= 1 && ABS(y - target_y) <= 1) return TRUE;
+    gtk_window_move(window, target_x, target_y);
+    return FALSE;
+}
+
+static gboolean pika_mapped(GtkWidget *widget, GdkEventAny *event, gpointer unused) {
+    pika_map_received = TRUE;
+    pika_center_mapped(GTK_WINDOW(widget));
+    return FALSE;
+}
+static void pika_unmapped(GtkWidget *widget, gpointer unused) { pika_map_received = FALSE; }
 
 static GtkWidget *pika_webview(GtkWidget *widget) {
     GType type = g_type_from_name("WebKitWebView");
@@ -67,6 +99,8 @@ static gboolean pika_first_realize(GSignalInvocationHint *hint, guint count, con
     gtk_style_context_add_provider(gtk_widget_get_style_context(widget), GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     g_object_unref(css);
     g_signal_connect(widget, "size-allocate", G_CALLBACK(pika_content_input_region), NULL);
+    g_signal_connect(widget, "map-event", G_CALLBACK(pika_mapped), NULL);
+    g_signal_connect(widget, "unmap", G_CALLBACK(pika_unmapped), NULL);
     GtkAllocation allocation;
     gtk_widget_get_allocation(widget, &allocation);
     pika_content_input_region(widget, &allocation, NULL);
@@ -78,12 +112,27 @@ static void pika_install_presentation(gint margin) {
     g_signal_add_emission_hook(g_signal_lookup("realize", GTK_TYPE_WIDGET), 0, pika_first_realize, NULL, NULL);
     g_type_class_unref(klass);
 }
-static gboolean pika_present_on_main(gpointer unused) {
+typedef struct { gint generation; gint attempts; } PikaPresentation;
+static gboolean pika_present_on_main(gpointer data) {
+    PikaPresentation *request = data;
+    if (request->generation != g_atomic_int_get(&pika_present_generation)) return G_SOURCE_REMOVE;
     GtkWindow *window = pika_window();
-    if (window) gtk_widget_set_opacity(GTK_WIDGET(window), 1.0);
+    if (!window || !gtk_widget_get_visible(GTK_WIDGET(window))) {
+        return ++request->attempts < 125 ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE;
+    }
+    if (gtk_widget_get_opacity(GTK_WIDGET(window)) > 0.99) return G_SOURCE_REMOVE;
+    // Do not expose a styled but incorrectly placed first frame. Poll only during
+    // the cold presentation handshake; subsequent openings incur no extra wait.
+    // Bound the guard for WMs/backends that do not honor absolute positioning.
+    if (!pika_center_mapped(window) && ++request->attempts < 125) return G_SOURCE_CONTINUE;
+    gtk_widget_set_opacity(GTK_WIDGET(window), 1.0);
     return G_SOURCE_REMOVE;
 }
-static void pika_present(void) { g_idle_add(pika_present_on_main, NULL); }
+static void pika_present(void) {
+    PikaPresentation *request = g_new0(PikaPresentation, 1);
+    request->generation = g_atomic_int_add(&pika_present_generation, 1) + 1;
+    g_timeout_add_full(G_PRIORITY_DEFAULT, 8, pika_present_on_main, request, g_free);
+}
 
 static gboolean pika_focus_on_main(gpointer data) {
     if (GPOINTER_TO_INT(data) != g_atomic_int_get(&pika_focus_generation)) return G_SOURCE_REMOVE;
@@ -111,7 +160,10 @@ static void pika_request_focus(void) {
     gint generation = g_atomic_int_add(&pika_focus_generation, 1) + 1;
     g_idle_add(pika_focus_on_main, GINT_TO_POINTER(generation));
 }
-static void pika_cancel_focus(void) { g_atomic_int_inc(&pika_focus_generation); }
+static void pika_cancel_focus(void) {
+    g_atomic_int_inc(&pika_focus_generation);
+    g_atomic_int_inc(&pika_present_generation);
+}
 
 static gboolean pika_read_focus_on_main(gpointer unused) {
     gint flags = 0;

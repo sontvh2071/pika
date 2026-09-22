@@ -4,12 +4,45 @@ Requires a graphical session. Does not change shortcuts or user config.
 """
 import json
 import os
+import re
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
 import time
 
 binary = Path(__file__).resolve().parents[1] / "build/bin/pika"
+# Independently observe X11 geometry, not Pika's requested/remembered position.
+check_geometry = bool(os.environ.get("DISPLAY")) and all(shutil.which(tool) for tool in ("xwininfo", "xprop", "xrandr"))
+geometry_checks = 0
+def assert_centered():
+    global geometry_checks
+    if not check_geometry:
+        return
+    monitors = subprocess.check_output(["xrandr", "--listmonitors"], text=True, timeout=3)
+    bounds = [tuple(map(int, m)) for m in re.findall(r"(\d+)/\d+x(\d+)/\d+([+-]\d+)([+-]\d+)", monitors)]
+    assert bounds, "Could not read monitor geometry"
+    tree = subprocess.check_output(["xwininfo", "-root", "-tree"], text=True, timeout=3)
+    for line in tree.splitlines():
+        match = re.match(r'\s*(0x[0-9a-f]+) "Pika":.*?\s(\d+)x(\d+)[+-]\d+[+-]\d+\s+([+-]\d+)([+-]\d+)', line)
+        if not match:
+            continue
+        xid, width, height, x, y = match.groups()
+        prop = subprocess.check_output(["xprop", "-id", xid, "_NET_WM_PID"], text=True, timeout=3)
+        pid = re.search(r"= (\d+)", prop)
+        if not pid:
+            continue
+        try:
+            if Path(f"/proc/{pid[1]}/exe").resolve(strict=True) != binary:
+                continue
+        except FileNotFoundError:
+            continue
+        width, height, x, y = map(int, (width, height, x, y))
+        assert any(abs(x - (mx + (mw-width)//2)) <= 1 and abs(y - (my + (mh-height)//2)) <= 1
+                   for mw, mh, mx, my in bounds), f"Visible Pika not centered: {(x,y,width,height)}, monitors={bounds}"
+        geometry_checks += 1
+        return
+    raise AssertionError("Could not find isolated Pika's native window")
 with tempfile.TemporaryDirectory(prefix="pika-smoke-") as tmp:
     root = Path(tmp)
     env = os.environ.copy()
@@ -25,6 +58,8 @@ with tempfile.TemporaryDirectory(prefix="pika-smoke-") as tmp:
         last = {}
         while time.monotonic() < deadline:
             last = json.loads(cli("focus-state").stdout)
+            if visible and last["visible"] and last["mapped"] and last["surface_ready"]:
+                assert_centered()
             if visible and all(last.values()):
                 return last
             if not visible and not last["mapped"] and not last["visible"] and not last["window_active"]:
@@ -89,6 +124,7 @@ with tempfile.TemporaryDirectory(prefix="pika-smoke-") as tmp:
                               "apps": stats["apps"], "focus_cycles": 10, "cold_toggle": "search focused",
                               "startup_surface": "guarded", "hide_ms": round(hide_ms, 1),
                               "stale_hide": "cancelled", "shutdown": "clean"}, indent=2))
+            print(f"Native geometry checks: {geometry_checks}" if check_geometry else "Native geometry checks: skipped (X11 tools unavailable)")
         finally:
             if gui.poll() is None:
                 cli("quit", check=False)
