@@ -496,3 +496,51 @@ Preview trình duyệt có nhãn `Preview example` và dùng số minh họa. B�
 Bản sửa ngày 22/09/2026 căn lại cửa sổ sau khi trình quản lý cửa sổ xác nhận nó đã được đưa lên màn hình. Trong lần hiện đầu, Pika giữ lớp ẩn khởi động cho tới khi kiểm tra được vị trí ở giữa, thay vì chỉ gửi lệnh căn giữa trước lúc hiện. Khoảng chờ này có giới hạn dự phòng cho hệ thống không hỗ trợ đặt vị trí tuyệt đối. Các lần mở tiếp theo vẫn dùng hiệu ứng 120/80 ms; vị trí thanh search không đổi khi nhập truy vấn.
 
 Không cần đổi autostart hoặc phím tắt Alt+Space. Để kiểm tra bản build trên phiên đồ họa hiện tại, chạy `python3 scripts/native-smoke.py`: khi có X11 và các công cụ xwininfo/xprop/xrandr, bài kiểm tra xác nhận tọa độ cửa sổ thật ở lần mở đầu từ tiến trình chạy nền, các lần bật/tắt và lần khởi động qua shortcut khi chưa có Pika chạy.
+
+### Disk Free — xem nhanh dung lượng lưu trữ
+
+Nhấn **Alt+Space → gõ `df` hoặc `disk free` → chọn Disk Free**. Có thể tìm bằng `storage`, `dung luong` hoặc `o dia`. Cột phải hiển thị từng filesystem đang được mount:
+
+- **Available**: dung lượng còn dùng được, in lớn để nhìn nhanh.
+- **Used / Total**: đã dùng và tổng dung lượng, với đơn vị KiB/MiB/GiB/TiB.
+- **% used** và thanh sử dụng dung lượng.
+- Đường dẫn mount, thiết bị và loại filesystem (ví dụ `/`, `/dev/sda2`, `ext4`).
+
+Phân vùng hệ thống `/` đứng đầu. Các vùng RAM tạm, firmware và filesystem hệ thống như tmpfs/efivarfs/squashfs nằm trong mục thu gọn **Memory & system**; mở mục này khi cần xem. Không cộng các filesystem thành tổng dung lượng máy, vì chúng có thể dùng chung tài nguyên. Thanh và chữ vẫn dùng theme đen trắng. Mốc 85% có nhãn gần đầy, 95% có nhãn rất ít chỗ, 100% trở lên báo đầy; các nhãn này áp dụng cho nhóm lưu trữ chính.
+
+Tự cập nhật mỗi **5 giây** khi đang xem; **Enter** hoặc **↻** làm mới ngay (giới hạn tối thiểu 1,5 giây giữa các lần đọc), giữ Pika mở. Ẩn Pika, mở Settings hoặc chọn kết quả khác sẽ dừng cập nhật. Lỗi đọc giữ dữ liệu trước đó kèm `Last known readings` và thời điểm cập nhật.
+
+Nguồn là lệnh GNU `df -h --output=source,fstype,size,used,avail,pcent,target`, không dùng sudo. `-h` dùng đơn vị theo lũy thừa 1024; Pika viết rõ `G` thành `GiB`, `T` thành `TiB` mà không thay đổi số đã làm tròn. Số phần trăm lấy trực tiếp từ df. Available không bao gồm phần dành riêng của filesystem, vì vậy Used + Available có thể không bằng Total. Chỉ hiện các filesystem đang mount mà df báo cáo, không phải mọi ổ vật lý chưa mount.
+
+Máy hiện tại đã có GNU coreutils, không cần setup thêm. Chẩn đoán:
+
+```sh
+cd /home/lilmint/workspace/me/pika
+go run ./scripts/check-disk-free
+```
+
+Preview trình duyệt có nhãn `Preview example` và một ổ Backup giả để kiểm tra trạng thái gần đầy. Bản desktop đọc số thực; ổ Backup minh họa không phải ổ được phát hiện trên máy.
+
+### Gold Today — giá vàng và biểu đồ SJC
+
+Giao diện Gold Today dùng tiếng Anh: **Buy** = mua vào, **Sell** = bán ra, **Spread** = chênh lệch mua–bán. Đơn vị **million VND/tael** là triệu đồng/lượng (1 lượng = 37,5 g); số dùng dấu chấm thập phân, ví dụ `140.50`. Ngày giờ hiển thị bằng tiếng Anh và vẫn theo múi giờ Việt Nam.
+
+Nhấn **Alt+Space → gõ `gold today`**, `gold`, `gia vang` hoặc `sjc`, rồi chọn **Gold Today**. Cột phải có:
+
+- Giá **mua vào / bán ra SJC**, mức tăng/giảm so với giá hôm trước trên nguồn và chênh lệch mua–bán.
+- Biểu đồ SJC khoảng 30 ngày: **đường liền = mua**, **nét đứt = bán**. Trục tung và giá đều dùng **triệu đồng/lượng**. Rê chuột hoặc kéo thanh trượt để xem từng ngày; khi thanh trượt có focus, dùng phím trái/phải hoặc Home/End.
+- Bảng giá các thương hiệu khác bên dưới; cuộn trong cột phải để xem hết.
+- Ngày giờ **nguồn 24h cập nhật**, thời điểm Pika đọc dữ liệu và nút **Open 24h source** để mở trang gốc.
+
+Nguồn: https://www.24h.com.vn/gia-vang-hom-nay-c425.html . Bảng trên 24h tính bằng nghìn đồng/lượng; Pika quy đổi sang đồng nội bộ rồi hiển thị triệu đồng/lượng. Dữ liệu lịch sử của nguồn đã là đồng nên không nhân thêm 1.000. Biểu đồ này là lịch sử SJC theo ngày, không phải giá intraday hay lịch sử chung cho tất cả thương hiệu.
+
+Pika kiểm tra khi mở mục này và dùng cache **5 phút**; chỉ lấy dữ liệu khi đang xem, không có tác vụ cập nhật nền lúc launcher ẩn. **Enter / ↻** yêu cầu làm mới, giới hạn tối thiểu **30 giây** giữa các lần đọc. Không cần API key hay setup thêm, nhưng cần Internet.
+
+Nếu ngày nguồn không trùng ngày hiện tại ở Việt Nam, bảng ghi rõ **Today’s prices are not available from the source yet.** và giữ nguyên ngày nguồn. Mất mạng hoặc cấu trúc nguồn thay đổi: giữ dữ liệu đã đọc trong phiên hiện tại với nhãn cũ; không bịa giá. Chưa từng đọc được thì hiện lỗi, không hiện số giả. Nếu riêng lịch sử bị lỗi, giá hợp lệ vẫn hiện nhưng biểu đồ báo chưa đọc được. Sau khi khởi động lại Pika, cần đọc mạng lại vì cache chỉ nằm trong bộ nhớ.
+
+Nguồn là trang HTML công khai, không phải API có cam kết định dạng; có thể cần cập nhật parser nếu 24h đổi cấu trúc. Pika không chạy JavaScript, quảng cáo hoặc iframe từ trang nguồn. Preview trình duyệt có nhãn `Preview example` và số minh họa; bản desktop tải giá thật. Chẩn đoán:
+
+```sh
+cd /home/lilmint/workspace/me/pika
+go run ./scripts/check-gold
+```

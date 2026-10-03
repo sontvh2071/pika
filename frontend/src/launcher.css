@@ -430,3 +430,62 @@ h1 {
 .process-table th:nth-child(2) { width:16%; }
 .process-table th:nth-child(3) { width:20%; }
 #process-view.is-stale #process-scroll { opacity:.55; }
+
+/* df -h overview: available space first, virtual filesystems tucked away. */
+.has-disk { height:100%; display:flex; flex-direction:column; min-height:0; }
+.has-disk>.detail-properties,.has-disk>.detail-action,.has-disk>.detail-description { display:none; }
+.has-disk>.detail-header { flex:none; }
+#disk-view { display:flex; flex-direction:column; flex:1; min-height:0; padding-top:10px; }
+#disk-scroll { overflow:auto; min-height:0; flex:1; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+.disk-card { padding:13px 0; border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent); }
+.disk-card:first-child { padding-top:0; }
+.disk-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.disk-heading h3 { margin:0; font-size:13px; font-weight:600; overflow-wrap:anywhere; min-width:0; }
+.disk-heading>span { flex:none; color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
+.disk-source { margin:4px 0 10px; color:var(--muted); font-size:10px; overflow-wrap:anywhere; }
+.disk-free-value { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.disk-free-value strong { font-size:25px; font-weight:600; letter-spacing:-.5px; font-variant-numeric:tabular-nums; }
+.disk-free-value span { font-size:11px; color:var(--muted); }
+.disk-card progress { display:block; appearance:none; width:100%; height:6px; margin:9px 0; border:0; border-radius:4px; overflow:hidden; background:var(--selection); color:var(--text); }
+.disk-card progress::-webkit-progress-bar { background:var(--selection); }
+.disk-card progress::-webkit-progress-value { background:var(--text); }
+.disk-card progress::-moz-progress-bar { background:var(--text); }
+.disk-sizes { display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.disk-warning { margin:9px 0 0; font-size:11px; font-weight:600; border-left:2px solid var(--text); padding-left:8px; }
+#disk-extras { margin-top:14px; }
+#disk-extras summary { cursor:pointer; font-size:11px; color:var(--muted); }
+#disk-system-volumes { margin-top:12px; }
+#disk-view.is-stale #disk-scroll { opacity:.55; }
+
+.has-gold { height:100%; display:flex; flex-direction:column; min-height:0; }
+.has-gold>.detail-properties,.has-gold>.detail-action,.has-gold>.detail-description { display:none; }
+.has-gold>.detail-header { flex:none; }
+#gold-view { display:flex; flex-direction:column; flex:1; min-height:0; padding-top:10px; }
+#gold-scroll { overflow:auto; min-height:0; flex:1; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+#gold-status { font-size:10px; margin-bottom:10px; }
+#gold-prices { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#gold-prices>div { display:flex; flex-direction:column; gap:5px; min-width:0; }
+#gold-prices span { color:var(--muted); font-size:11px; }
+#gold-prices strong { font-size:25px; font-weight:600; letter-spacing:-.5px; font-variant-numeric:tabular-nums; }
+#gold-prices small { font-size:10px; line-height:1.5; }
+#gold-spread { font-size:10px; color:var(--muted); margin:9px 0 14px; line-height:1.5; }
+#gold-chart-section { border-top:1px solid var(--border); padding-top:12px; }
+#gold-chart-section h3 { margin:0 0 8px; font-size:12px; font-weight:600; }
+.gold-legend { display:flex; flex-wrap:wrap; gap:8px; font-size:10px; color:var(--muted); }
+#gold-chart svg { display:block; width:100%; height:auto; margin-top:8px; overflow:visible; }
+.gold-grid { stroke:var(--border); stroke-width:.5; stroke-opacity:.5; }
+.gold-axis { fill:var(--muted); font-size:9px; }
+.gold-buy-line { stroke:var(--text); stroke-width:2; }
+.gold-sell-line { stroke:var(--muted); stroke-width:2; stroke-dasharray:5 3; }
+.gold-cursor { stroke:var(--muted); stroke-width:1; stroke-dasharray:2 3; }
+.gold-dot { fill:var(--surface); stroke:var(--text); stroke-width:1.5; }
+#gold-day { width:100%; height:12px; margin:7px 0 0; accent-color:var(--text); }
+#gold-point { font-size:10px; color:var(--muted); margin:5px 0 14px; font-variant-numeric:tabular-nums; }
+.gold-table { width:100%; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; }
+.gold-table caption { text-align:left; font-size:10px; color:var(--muted); margin:0 0 7px; }
+.gold-table th,.gold-table td { padding:7px 2px; text-align:right; border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent); }
+.gold-table th { color:var(--muted); font-weight:500; }
+.gold-table th:first-child,.gold-table td:first-child { text-align:left; }
+#gold-source { margin-top:10px; flex:none; font-size:11px; }
+#gold-view.is-stale #gold-prices { opacity:.65; }
+#gold-view.is-stale #gold-status { border-left:2px solid var(--text); padding-left:7px; }

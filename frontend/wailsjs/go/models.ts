@@ -263,6 +263,160 @@ export namespace config {
 
 }
 
+export namespace diskfree {
+
+	export class Filesystem {
+	    source: string;
+	    type: string;
+	    total: string;
+	    used: string;
+	    available: string;
+	    percent?: number;
+	    mount: string;
+	    virtual: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new Filesystem(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.source = source["source"];
+	        this.type = source["type"];
+	        this.total = source["total"];
+	        this.used = source["used"];
+	        this.available = source["available"];
+	        this.percent = source["percent"];
+	        this.mount = source["mount"];
+	        this.virtual = source["virtual"];
+	    }
+	}
+	export class Snapshot {
+	    filesystems: Filesystem[];
+	    updated_at: number;
+	    stale: boolean;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Snapshot(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filesystems = this.convertValues(source["filesystems"], Filesystem);
+	        this.updated_at = source["updated_at"];
+	        this.stale = source["stale"];
+	        this.message = source["message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace gold {
+
+	export class Point {
+	    date: string;
+	    buy: number;
+	    sell: number;
+
+	    static createFrom(source: any = {}) {
+	        return new Point(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.date = source["date"];
+	        this.buy = source["buy"];
+	        this.sell = source["sell"];
+	    }
+	}
+	export class Quote {
+	    code: string;
+	    name: string;
+	    buy: number;
+	    sell: number;
+	    buy_change?: number;
+	    sell_change?: number;
+
+	    static createFrom(source: any = {}) {
+	        return new Quote(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.name = source["name"];
+	        this.buy = source["buy"];
+	        this.sell = source["sell"];
+	        this.buy_change = source["buy_change"];
+	        this.sell_change = source["sell_change"];
+	    }
+	}
+	export class Snapshot {
+	    quotes: Quote[];
+	    history: Point[];
+	    source_at: number;
+	    fetched_at: number;
+	    is_today: boolean;
+	    stale: boolean;
+	    message: string;
+	    chart_message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Snapshot(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.quotes = this.convertValues(source["quotes"], Quote);
+	        this.history = this.convertValues(source["history"], Point);
+	        this.source_at = source["source_at"];
+	        this.fetched_at = source["fetched_at"];
+	        this.is_today = source["is_today"];
+	        this.stale = source["stale"];
+	        this.message = source["message"];
+	        this.chart_message = source["chart_message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace launcher {
 	
 	export class Details {

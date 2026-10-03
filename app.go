@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"pika/internal/codexusage"
 	"pika/internal/config"
+	"pika/internal/diskfree"
+	"pika/internal/gold"
 	"pika/internal/ipc"
 	"pika/internal/launcher"
 	"pika/internal/processmonitor"
@@ -149,9 +151,17 @@ func (a *App) Search(query, kind string, requestID uint64) launcher.Response {
 func (a *App) Details(id string) (launcher.Details, error) { return a.service.Details(id) }
 func (a *App) Icon(id string) string                       { return a.service.Icon(id) }
 func (a *App) ProcessMonitor() processmonitor.Snapshot     { return a.service.ProcessMonitor() }
-func (a *App) Sensors() sensors.Snapshot                   { return a.service.Sensors() }
+func (a *App) GoldToday(refresh bool) gold.Snapshot        { return a.service.GoldToday(refresh) }
+func (a *App) OpenGoldSource() {
+	a.mu.Lock()
+	a.hideNowLocked()
+	a.mu.Unlock()
+	runtime.BrowserOpenURL(a.ctx, gold.SourceURL)
+}
+func (a *App) DiskFree() diskfree.Snapshot { return a.service.DiskFree() }
+func (a *App) Sensors() sensors.Snapshot   { return a.service.Sensors() }
 func (a *App) Execute(id string) error {
-	if id == "system:sensors" {
+	if id == "system:sensors" || id == "system:df" || id == "system:gold" {
 		return nil
 	}
 	if !a.dispatching.CompareAndSwap(false, true) {

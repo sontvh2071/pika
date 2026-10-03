@@ -64,3 +64,7 @@ Panel shadows use two soft neutral-black layers. The native window reserves a tr
 Search `sensors` to view live temperatures, fan speeds and voltages in the detail panel. Reads `sensors -j` without sudo; refreshes every 2 seconds while visible, or with Enter/↻ (minimum 1.5 seconds between reads). Requires lm-sensors and working hardware drivers. Polling stops when hidden or another result is selected. Diagnostic: `go run ./scripts/check-sensors`.
 
 Selecting Htop shows a live CPU/RAM/swap overview and the top eight processes in the right panel. Enter opens the existing Htop desktop entry (WezTerm in the personal setup). Reads `/proc` directly without running Htop or sudo; polls only while visible. See the Vietnamese guide for sampling and memory semantics.
+
+Search `df` or `disk free` for mounted storage usage: prominent available space, used/total, percentage bars, mount paths and filesystem types. Uses GNU `df -h` with explicit binary units, refreshes every 5 seconds while visible; Enter/↻ refresh without opening a terminal. Memory/system filesystems are collapsed separately. Diagnostic: `go run ./scripts/check-disk-free`.
+
+Search `gold today` / `gia vang` for Vietnamese gold prices from 24h: SJC buy/sell and day-over-day changes, an interactive daily SJC history chart, and other quoted brands. Values are in million VND per lượng; source timestamps and stale/non-today data are explicit. On-demand network reads cache for 5 minutes, manual refresh has a 30-second floor. Diagnostic: `go run ./scripts/check-gold`.

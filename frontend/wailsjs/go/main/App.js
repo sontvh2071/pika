@@ -14,6 +14,10 @@ export function Details(arg1) {
   return window['go']['main']['App']['Details'](arg1);
 }
 
+export function DiskFree() {
+  return window['go']['main']['App']['DiskFree']();
+}
+
 export function Execute(arg1) {
   return window['go']['main']['App']['Execute'](arg1);
 }
@@ -30,6 +34,10 @@ export function GetState() {
   return window['go']['main']['App']['GetState']();
 }
 
+export function GoldToday(arg1) {
+  return window['go']['main']['App']['GoldToday'](arg1);
+}
+
 export function Hide() {
   return window['go']['main']['App']['Hide']();
 }
@@ -40,6 +48,10 @@ export function Icon(arg1) {
 
 export function OpenConfig() {
   return window['go']['main']['App']['OpenConfig']();
+}
+
+export function OpenGoldSource() {
+  return window['go']['main']['App']['OpenGoldSource']();
 }
 
 export function PresentationReady(arg1) {

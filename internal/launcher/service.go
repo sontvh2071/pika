@@ -18,6 +18,8 @@ import (
 	"pika/internal/codexusage"
 	"pika/internal/config"
 	"pika/internal/desktop"
+	"pika/internal/diskfree"
+	"pika/internal/gold"
 	"pika/internal/processmonitor"
 	"pika/internal/sensors"
 	"pika/internal/storage"
@@ -68,12 +70,14 @@ type Service struct {
 	metadataSlots   chan struct{}
 	codexQuota      *codexusage.Client
 	sensorReadings  *sensors.Client
+	diskReadings    *diskfree.Client
+	goldPrices      *gold.Client
 	processReadings *processmonitor.Client
 }
 
 func New(cfg config.Config, path, dataPath string) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &Service{cfg: cfg, configPath: path, refresh: make(chan struct{}, 1), ctx: ctx, cancel: cancel, metadataSlots: make(chan struct{}, 2), codexQuota: codexusage.New(), sensorReadings: sensors.New(), processReadings: processmonitor.New()}
+	s := &Service{cfg: cfg, configPath: path, refresh: make(chan struct{}, 1), ctx: ctx, cancel: cancel, metadataSlots: make(chan struct{}, 2), codexQuota: codexusage.New(), sensorReadings: sensors.New(), diskReadings: diskfree.New(), goldPrices: gold.New(), processReadings: processmonitor.New()}
 	s.snapshot.Store(&Snapshot{Items: []catalog.Candidate{}, ByID: map[string]catalog.Candidate{}})
 	usage := map[string]catalog.Usage{}
 	store, err := storage.Open(dataPath)

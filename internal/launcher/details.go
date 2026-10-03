@@ -61,7 +61,7 @@ func (s *Service) Details(id string) (Details, error) {
 			d.Opener = "VS Code"
 		}
 	case "system":
-		if c.Target == "sensors" {
+		if c.Target == "sensors" || c.Target == "df" || c.Target == "gold" {
 			d.Opener = "Refresh readings"
 		} else if c.Target == "lock" {
 			d.Opener = "Lock screen"
